@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalCast — Partage d'écran local</title>
+
+  <!-- PeerJS: WebRTC + signalisation gratuite via le cloud PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --fg: #e6edf3;
+      --fg2: #8b949e;
+      --border: #30363d;
+      --primary: #2f81f7;
+      --primary-dim: rgba(47, 129, 247, 0.12);
+      --accent: #a371f7;
+      --accent-dim: rgba(163, 113, 247, 0.12);
+      --danger: #f85149;
+      --danger-dim: rgba(248, 81, 73, 0.12);
+      --success: #3fb950;
+      --warn: #e3b341;
+      --radius: 12px;
+      --glass: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(163,113,247,0.06) 0%, transparent 60%);
+      color: var(--fg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    header .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1rem; }
+    header .logo span { color: var(--primary); }
+    header .back-btn {
+      background: none;
+      border: none;
+      color: var(--fg2);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+      display: none;
+      align-items: center;
+    }
+    header .back-btn:hover { background: var(--glass); color: var(--fg); }
+    header .badge {
+      margin-left: auto;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+    header .badge.caster { background: var(--primary-dim); color: var(--primary); }
+    header .badge.viewer { background: var(--accent-dim); color: var(--accent); }
+
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .container { width: 100%; max-width: 680px; }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+    .card p  { font-size: 0.85rem; color: var(--fg2); line-height: 1.5; }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; border-radius: 10px; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; border: none; transition: all .15s ease; width: 100%;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 24px rgba(47,129,247,.25);
+    }
+    .btn-primary:hover { background: #388bfd; }
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 24px rgba(163,113,247,.25);
+    }
+    .btn-accent:hover { background: #b88bf8; }
+    .btn-danger {
+      background: var(--danger-dim);
+      color: var(--danger);
+      border: 1px solid rgba(248,81,73,.25);
+    }
+    .btn-danger:hover { background: rgba(248,81,73,.2); }
+    .btn-ghost {
+      background: var(--glass);
+      color: var(--fg);
+      border: 1px solid var(--glass-border);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.08); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-sm { padding: 7px 14px; font-size: 0.8rem; width: auto; }
+
+    /* ─── Home ─── */
+    .home-hero { text-align: center; padding: 20px 0 28px; }
+    .home-hero .icon {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: var(--primary-dim);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 0 32px rgba(47,129,247,.25);
+    }
+    .home-hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+    .home-hero h1 span { color: var(--primary); }
+    .home-hero p { font-size: 1rem; color: var(--fg2); max-width: 420px; margin: 0 auto; }
+
+    .features {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px;
+    }
+    .feature {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 10px; padding: 14px 12px; text-align: center;
+    }
+    .feature .feat-icon { font-size: 1.2rem; margin-bottom: 6px; }
+    .feature strong { font-size: .82rem; display: block; }
+    .feature span { font-size: .74rem; color: var(--fg2); }
+
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 520px) { .mode-grid { grid-template-columns: 1fr; } .features { grid-template-columns: 1fr 1fr; } }
+
+    .mode-card {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .mode-card.primary-border { border-color: rgba(47,129,247,.3); }
+    .mode-card.accent-border  { border-color: rgba(163,113,247,.3); }
+    .mode-card .mode-icon {
+      width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+    }
+    .mode-card .mode-icon.p { background: var(--primary-dim); }
+    .mode-card .mode-icon.a { background: var(--accent-dim); }
+    .mode-card h3 { font-size: .95rem; font-weight: 600; }
+    .mode-card > p { font-size: .82rem; color: var(--fg2); flex: 1; }
+
+    .room-input {
+      width: 100%; padding: 10px 12px; border-radius: 8px; font-size: .88rem; font-family: monospace;
+      background: rgba(255,255,255,.05); border: 1px solid var(--border);
+      color: var(--fg); outline: none; margin-bottom: 8px;
+    }
+    .room-input:focus { border-color: var(--accent); background: var(--accent-dim); }
+    .room-input::placeholder { color: var(--fg2); opacity: .6; }
+
+    /* ─── Video ─── */
+    .video-wrap {
+      position: relative; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+    }
+    .video-wrap video { width: 100%; height: 100%; object-fit: contain; }
+    .video-placeholder { text-align: center; color: var(--fg2); }
+    .video-placeholder .big-icon { font-size: 3rem; opacity: .3; margin-bottom: 8px; }
+    .video-placeholder p { font-size: .85rem; }
+
+    .live-badge {
+      position: absolute; top: 10px; left: 10px;
+      background: var(--danger); color: #fff; font-size: .72rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: blink .8s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .video-controls {
+      position: absolute; bottom: 10px; right: 10px;
+      display: flex; gap: 6px; opacity: 0; transition: opacity .2s;
+    }
+    .video-wrap:hover .video-controls { opacity: 1; }
+    .ctrl-btn {
+      background: rgba(0,0,0,.5); backdrop-filter: blur(8px);
+      border: none; color: #fff; width: 34px; height: 34px;
+      border-radius: 8px; cursor: pointer; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ctrl-btn:hover { background: rgba(255,255,255,.2); }
+
+    /* ─── Status bar ─── */
+    .status-bar {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .status-bar .label { font-weight: 600; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+    .status-indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+    .status-indicator.live { background: var(--danger); animation: blink .8s infinite; }
+    .status-indicator.connected { background: var(--success); animation: blink 2s infinite; }
+    .conn-status { font-size: .8rem; display: flex; align-items: center; gap: 5px; }
+    .conn-status.idle { color: var(--fg2); }
+    .conn-status.connecting { color: var(--warn); }
+    .conn-status.connected { color: var(--success); }
+    .conn-status.disconnected { color: #e3841b; }
+    .conn-status.error { color: var(--danger); }
+
+    /* ─── Capture buttons ─── */
+    .capture-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .capture-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      padding: 20px; border-radius: 10px; cursor: pointer;
+      border: 1px solid var(--border); background: none; color: var(--fg);
+      font-family: inherit; transition: all .15s;
+    }
+    .capture-btn:hover { border-color: var(--primary); background: var(--primary-dim); }
+    .capture-btn.cam:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .capture-btn .c-icon { font-size: 2rem; }
+    .capture-btn strong { font-size: .9rem; }
+    .capture-btn span { font-size: .76rem; color: var(--fg2); text-align: center; }
+
+    /* ─── Share box ─── */
+    .share-row { display: flex; gap: 8px; align-items: center; }
+    .share-url {
+      flex: 1; background: rgba(255,255,255,.05); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; font-size: .8rem; font-family: monospace;
+      color: var(--fg2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .room-label { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--fg2); background: rgba(255,255,255,.04); border-radius: 8px; padding: 10px 12px; }
+    .room-label strong { color: var(--fg); font-family: monospace; font-size: .9rem; letter-spacing: .03em; }
+
+    /* ─── Alert ─── */
+    .alert {
+      border-radius: 10px; padding: 12px 14px; font-size: .84rem; line-height: 1.5;
+      margin-bottom: 12px; border: 1px solid;
+    }
+    .alert.error   { background: var(--danger-dim); border-color: rgba(248,81,73,.3); color: var(--danger); }
+    .alert.info    { background: var(--primary-dim); border-color: rgba(47,129,247,.3); color: var(--primary); }
+    .alert.warning { background: rgba(227,179,65,.1); border-color: rgba(227,179,65,.3); color: var(--warn); }
+    .alert .alert-title { font-weight: 700; margin-bottom: 4px; }
+    .alert a { color: inherit; }
+
+    /* ─── Steps ─── */
+    .steps { display: flex; flex-direction: column; gap: 8px; }
+    .step { display: flex; gap: 10px; align-items: flex-start; font-size: .84rem; color: var(--fg2); }
+    .step-num {
+      min-width: 22px; height: 22px; border-radius: 50%;
+      background: var(--primary-dim); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem; font-weight: 700; margin-top: 1px;
+    }
+
+    /* ─── Spinner ─── */
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid rgba(47,129,247,.2);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin .7s linear infinite; margin: 0 auto 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ping-ring {
+      width: 48px; height: 48px; position: relative; margin: 0 auto 8px;
+    }
+    .ping-ring::before, .ping-ring::after {
+      content: ''; position: absolute; inset: 0; border-radius: 50%;
+      border: 2px solid var(--primary);
+    }
+    .ping-ring::before { opacity: .3; animation: ping 1.5s ease-out infinite; }
+    .ping-ring::after  { opacity: .6; }
+    .ping-ring .ping-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    @keyframes ping { 0%{transform:scale(1);opacity:.4} 100%{transform:scale(1.6);opacity:0} }
+
+    footer {
+      text-align: center; padding: 12px; font-size: .72rem;
+      color: rgba(255,255,255,.15); border-top: 1px solid rgba(255,255,255,.05);
+    }
+
+    .hidden { display: none !important; }
+    .fade-in { animation: fadeIn .35s ease-out; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+    @media (max-width: 480px) {
+      .capture-grid { grid-template-columns: 1fr; }
+      main { padding: 20px 12px; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" id="backBtn" onclick="goHome()" title="Retour">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <div class="logo">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M2 12h20M12 2C8 6 8 18 12 22M12 2c4 4 4 16 0 20"/>
+      <circle cx="12" cy="12" r="2" fill="currentColor"/>
+    </svg>
+    Local<span>Cast</span>
+  </div>
+  <span class="badge hidden" id="modeBadge"></span>
+</header>
+
+<main>
+  <!-- ══════════════════ HOME ══════════════════ -->
+  <div class="container" id="pageHome">
+    <div class="home-hero">
+      <div class="icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2f81f7" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <polyline points="8 21 12 17 16 21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <h1>Local<span>Cast</span></h1>
+      <p>Partagez votre écran ou caméra en temps réel entre appareils sur le même Wi-Fi</p>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feat-icon">⚡</div>
+        <strong>Ultra rapide</strong>
+        <span>Connexion P2P directe</span>
+      </div>
+      <div class="feature">
+        <div class="feat-icon">🔒</div>
+        <strong>Privé</strong>
+        <span>Chiffré de bout en bout</span>
+      </div>
+      <div class="feature">
+        <div class="feat-icon">📶</div>
+        <strong>Local</strong>
+        <span>Optimisé Wi-Fi local</span>
+      </div>
+    </div>
+
+    <div class="mode-grid">
+      <div class="mode-card primary-border">
+        <div class="mode-icon p">🖥️</div>
+        <h3>Diffuser</h3>
+        <p>Partagez votre écran ou caméra. Un code unique est généré pour l'autre appareil.</p>
+        <button class="btn btn-primary" onclick="startCaster()">Commencer à diffuser →</button>
+      </div>
+      <div class="mode-card accent-border">
+        <div class="mode-icon a">👁️</div>
+        <h3>Regarder</h3>
+        <p>Entrez le code fourni par l'appareil qui diffuse pour voir son écran.</p>
+        <input class="room-input" id="viewerRoomInput" placeholder="Code de salle ex: romeo-lima-4872" onkeydown="if(event.key==='Enter') joinViewer()" />
+        <button class="btn btn-accent" id="joinBtn" onclick="joinViewer()">Rejoindre la salle →</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px; text-align:center; font-size:.8rem; color:var(--fg2)">
+      Technologie <strong>WebRTC</strong> + <strong>PeerJS</strong> — connexion directe chiffrée · 100% dans le navigateur · Aucune installation
+    </div>
+  </div>
+
+  <!-- ══════════════════ CASTER ══════════════════ -->
+  <div class="container hidden" id="pageCaster">
+    <div class="card fade-in">
+      <div class="status-bar">
+        <div class="label">
+          <div class="status-indicator" id="casterDot"></div>
+          <span id="casterTitle">Prêt à diffuser</span>
+        </div>
+        <div class="conn-status idle" id="casterConnStatus">
+          <span>🔌</span><span id="casterConnLabel">En attente</span>
+        </div>
+      </div>
+
+      <div class="video-wrap" id="casterVideoWrap">
+        <div class="video-placeholder" id="casterPlaceholder">
+          <div class="big-icon">🖥️</div>
+          <p>Aucune diffusion active</p>
+        </div>
+        <video id="casterVideo" autoplay muted playsinline style="display:none"></video>
+        <div class="live-badge hidden" id="liveBadge">
+          <div class="live-dot"></div> LIVE
+        </div>
+        <div class="video-controls" id="casterControls">
+          <button class="ctrl-btn" onclick="stopCasting()" title="Arrêter">⏹</button>
+        </div>
+      </div>
+
+      <div id="captureErrorBox" class="hidden"></div>
+      <div id="casterWsError" class="hidden"></div>
+
+      <div class="capture-grid" id="captureButtons">
+        <button class="capture-btn" onclick="handleCasterStart('screen')">
+          <div class="c-icon">🖥️</div>
+          <strong>Partager l'écran</strong>
+          <span>Écran entier ou une fenêtre</span>
+        </button>
+        <button class="capture-btn cam" onclick="handleCasterStart('camera')">
+          <div class="c-icon">📷</div>
+          <strong>Caméra</strong>
+          <span>Diffuse ta caméra en direct</span>
+        </button>
+      </div>
+
+      <button class="btn btn-danger hidden" id="stopCastBtn" onclick="stopCasting()" style="margin-top:10px">
+        ⏹ Arrêter la diffusion
+      </button>
+    </div>
+
+    <div class="card fade-in">
+      <h2 style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span>👥</span> Partager avec un autre appareil
+      </h2>
+      <p style="margin-bottom:12px">Les deux appareils doivent être sur le même réseau Wi-Fi. Copiez ce lien sur l'autre appareil.</p>
+      <div class="share-row" style="margin-bottom:10px">
+        <div class="share-url" id="shareUrl">En attente de la connexion...</div>
+        <button class="btn btn-ghost btn-sm" id="copyBtn" onclick="copyShareUrl()">📋 Copier</button>
+      </div>
+      <div class="room-label">
+        <span>Code de la salle :</span>
+        <strong id="roomCodeDisplay">—</strong>
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <h2 style="margin-bottom:10px">Comment utiliser</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><span>Ouvrez le site dans un <strong>onglet normal</strong> du navigateur (pas un aperçu intégré)</span></div>
+        <div class="step"><div class="step-num">2</div><span>Cliquez "Partager l'écran" ou "Caméra" et <strong>acceptez la permission</strong></span></div>
+        <div class="step"><div class="step-num">3</div><span>Copiez le lien et ouvrez-le sur l'autre appareil</span></div>
+        <div class="step"><div class="step-num">4</div><span>Les deux appareils sur le même Wi-Fi — connexion automatique</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ VIEWER ══════════════════ -->
+  <div class="container hidden" id="pageViewer">
+    <div class="card fade-in">
+      <div class="status-bar">
+        <div class="label">
+          <div class="status-indicator" id="viewerDot"></div>
+          <span id="viewerTitle">Visualiseur</span>
+        </div>
+        <div class="conn-status idle" id="viewerConnStatus">
+          <span>🔌</span><span id="viewerConnLabel">En attente</span>
+        </div>
+      </div>
+
+      <div class="video-wrap" id="viewerVideoWrap">
+        <div class="video-placeholder" id="viewerPlaceholder">
+          <div id="viewerPlaceholderContent">
+            <div class="big-icon">📶</div>
+            <p>Cliquez pour rejoindre la salle</p>
+          </div>
+        </div>
+        <video id="viewerVideo" autoplay playsinline style="display:none"></video>
+        <div class="video-controls" id="viewerControls" style="display:none">
+          <button class="ctrl-btn" id="muteBtn" onclick="toggleMute()" title="Son">🔊</button>
+          <button class="ctrl-btn" onclick="toggleFullscreen('viewerVideoWrap')" title="Plein écran">⛶</button>
+        </div>
+      </div>
+
+      <div id="viewerErrorBox" class="hidden"></div>
+
+      <button class="btn btn-accent" id="joinRoomBtn" onclick="connectViewer()">
+        ▶ Rejoindre la salle
+      </button>
+      <div class="hidden" id="viewerWaiting" style="text-align:center;padding:12px;font-size:.85rem;color:var(--fg2)">
+        <div class="spinner"></div>
+        En attente du flux vidéo...
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <div class="room-label">
+        <span>Salle :</span>
+        <strong id="viewerRoomDisplay">—</strong>
+      </div>
+      <p style="margin-top:8px">Assurez-vous que les deux appareils sont sur le même Wi-Fi. La vidéo est transmise en peer-to-peer (WebRTC) sans passer par un serveur distant.</p>
+    </div>
+  </div>
+</main>
+
+<footer>LocalCast — Partage d'écran local via WebRTC + PeerJS · Hébergé sur GitHub Pages</footer>
+
+<script>
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+let mode = 'home'; // home | caster | viewer
+let roomId = '';
+let myPeer = null;
+let localStream = null;
+let currentCall = null;
+let isMuted = false;
+
+/* ═══════════════════════════════════════════════
+   ROUTING (URL params)
+═══════════════════════════════════════════════ */
+(function initFromUrl() {
+  const p = new URLSearchParams(location.search);
+  const r = p.get('room');
+  const m = p.get('mode');
+  if (r && m === 'viewer') {
+    document.getElementById('viewerRoomInput') && (document.getElementById('viewerRoomInput').value = r);
+    setTimeout(() => joinViewerWithId(r), 100);
+  }
+})();
+
+/* ═══════════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════════ */
+function showPage(page) {
+  ['Home','Caster','Viewer'].forEach(p => {
+    document.getElementById('page' + p).classList.toggle('hidden', p.toLowerCase() !== page);
+  });
+  mode = page;
+  document.getElementById('backBtn').style.display = page === 'home' ? 'none' : 'flex';
+  const badge = document.getElementById('modeBadge');
+  if (page === 'home') {
+    badge.classList.add('hidden');
+  } else {
+    badge.className = 'badge ' + (page === 'caster' ? 'caster' : 'viewer');
+    badge.textContent = page === 'caster' ? 'Diffuseur' : 'Spectateur';
+    badge.classList.remove('hidden');
+  }
+}
+
+function goHome() {
+  cleanup();
+  showPage('home');
+  history.replaceState({}, '', location.pathname);
+}
+
+/* ═══════════════════════════════════════════════
+   CASTER
+═══════════════════════════════════════════════ */
+function startCaster() {
+  roomId = generateRoomId();
+  showPage('caster');
+  document.getElementById('roomCodeDisplay').textContent = roomId;
+  setCasterStatus('idle');
+  updateShareUrl();
+  initPeer('caster');
+}
+
+function generateRoomId() {
+  const words = ['alpha','bravo','charlie','delta','echo','foxtrot','golf','hotel',
+    'india','juliet','kilo','lima','mike','november','oscar','papa','romeo',
+    'sierra','tango','uniform','victor','whiskey','xray','yankee','zulu'];
+  const pick = () => words[Math.floor(Math.random() * words.length)];
+  return pick() + '-' + pick() + '-' + (Math.floor(Math.random() * 9000) + 1000);
+}
+
+function sanitizePeerId(id) {
+  // PeerJS IDs: letters, numbers, hyphens only
+  return 'lc-' + id.replace(/[^a-z0-9\-]/gi, '-').toLowerCase();
+}
+
+function initPeer(role) {
+  const peerId = sanitizePeerId(roomId);
+
+  // PeerJS free cloud server — no backend needed
+  myPeer = new Peer(role === 'caster' ? peerId : undefined, {
+    host: '0.peerjs.com',
+    port: 443,
+    secure: true,
+    path: '/',
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+      ]
+    }
+  });
+
+  myPeer.on('open', (id) => {
+    if (role === 'caster') {
+      setCasterStatus('ready', 'Prêt — en attente d\'un spectateur');
+    } else {
+      // viewer: now connect to caster
+      connectToCaster(peerId);
+    }
+  });
+
+  myPeer.on('error', (err) => {
+    const msg = String(err.message || err);
+    if (role === 'caster') {
+      showCaptureError('error', 'Erreur PeerJS', msg + ' — Essayez de recharger la page.');
+      setCasterStatus('error');
+    } else {
+      showViewerError('error', 'Erreur de connexion', msg);
+      setViewerStatus('error');
+    }
+  });
+
+  if (role === 'caster') {
+    // Caster listens for incoming calls from viewers
+    myPeer.on('call', (call) => {
+      currentCall = call;
+      call.answer(localStream); // send our stream to the viewer
+      call.on('stream', () => {}); // viewer may send empty stream back, ignore
+      call.on('close', () => {
+        setCasterStatus('disconnected', 'Spectateur déconnecté');
+      });
+      call.on('error', () => {
+        setCasterStatus('error');
+      });
+      setCasterStatus('connected', '1 spectateur connecté');
+    });
+  }
+}
+
+/**
+ * Called directly from button click — getDisplayMedia/getUserMedia
+ * MUST be triggered synchronously from the user gesture.
+ */
+async function handleCasterStart(type) {
+  clearCaptureError();
+
+  let stream;
+  try {
+    if (type === 'screen') {
+      if (typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
+        showCaptureError('error', 'Non supporté', 'Votre navigateur ne supporte pas le partage d\'écran. Utilisez Chrome, Edge ou Firefox sur ordinateur.');
+        return;
+      }
+      stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true });
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: 30 },
+        audio: true
+      });
+    }
+  } catch (err) {
+    handleCaptureError(err, type);
+    return;
+  }
+
+  if (!stream || stream.getTracks().length === 0) return;
+
+  localStream = stream;
+
+  // When user stops screen share via browser UI
+  stream.getVideoTracks()[0]?.addEventListener('ended', stopCasting);
+
+  // Show preview
+  const video = document.getElementById('casterVideo');
+  video.srcObject = stream;
+  video.style.display = 'block';
+  document.getElementById('casterPlaceholder').style.display = 'none';
+  document.getElementById('liveBadge').classList.remove('hidden');
+  document.getElementById('captureButtons').style.display = 'none';
+  document.getElementById('stopCastBtn').classList.remove('hidden');
+  document.getElementById('casterDot').classList.add('live');
+  document.getElementById('casterTitle').textContent = 'Diffusion en cours';
+  setCasterStatus('live', 'Diffusion en cours — en attente d\'un spectateur');
+}
+
+function handleCaptureError(err, type) {
+  const name = err?.name || '';
+  const msg = (err?.message || '').toLowerCase();
+
+  if (name === 'NotAllowedError') {
+    if (msg.includes('iframe') || msg.includes('embed') || msg.includes('permissions policy') || msg.includes('document')) {
+      showCaptureError('warning', 'Bloqué dans l\'aperçu intégré',
+        'Le partage d\'écran est bloqué car le site est affiché dans un cadre intégré (iframe). ' +
+        '<a href="' + location.href + '" target="_blank" rel="noopener">Cliquez ici pour ouvrir dans un onglet normal</a> et recommencez.'
+      );
+    } else {
+      showCaptureError('error', 'Permission refusée',
+        'Vous avez refusé le partage ' + (type === 'screen' ? 'd\'écran' : 'de caméra') + '. ' +
+        'Cliquez à nouveau et acceptez la boîte de dialogue du navigateur.'
+      );
+    }
+  } else if (name === 'NotFoundError') {
+    showCaptureError('error', type === 'screen' ? 'Écran introuvable' : 'Aucune caméra détectée',
+      'Vérifiez que votre ' + (type === 'screen' ? 'écran est disponible' : 'caméra est connectée') + '.'
+    );
+  } else if (name === 'NotSupportedError') {
+    showCaptureError('error', 'Non supporté',
+      'Utilisez Chrome, Edge ou Firefox en version récente sur ordinateur. Sur mobile, seul le partage de caméra est disponible.'
+    );
+  } else {
+    showCaptureError('error', 'Erreur inattendue',
+      (err?.message || 'Impossible de démarrer la capture.') + ' Assurez-vous d\'utiliser HTTPS.'
+    );
+  }
+}
+
+function stopCasting() {
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  if (currentCall) { currentCall.close(); currentCall = null; }
+
+  const video = document.getElementById('casterVideo');
+  video.srcObject = null;
+  video.style.display = 'none';
+  document.getElementById('casterPlaceholder').style.display = '';
+  document.getElementById('liveBadge').classList.add('hidden');
+  document.getElementById('captureButtons').style.display = '';
+  document.getElementById('stopCastBtn').classList.add('hidden');
+  document.getElementById('casterDot').classList.remove('live', 'connected');
+  document.getElementById('casterTitle').textContent = 'Prêt à diffuser';
+  setCasterStatus('idle');
+}
+
+function setCasterStatus(s, label) {
+  const map = {
+    idle: { cls: 'idle', icon: '🔌', text: label || 'En attente' },
+    ready: { cls: 'idle', icon: '✅', text: label || 'Prêt' },
+    live: { cls: 'connecting', icon: '📡', text: label || 'En direct' },
+    connected: { cls: 'connected', icon: '🔗', text: label || 'Connecté' },
+    disconnected: { cls: 'disconnected', icon: '📵', text: label || 'Déconnecté' },
+    error: { cls: 'error', icon: '⚠️', text: label || 'Erreur' },
+  };
+  const d = map[s] || map.idle;
+  const el = document.getElementById('casterConnStatus');
+  el.className = 'conn-status ' + d.cls;
+  el.innerHTML = '<span>' + d.icon + '</span><span>' + d.text + '</span>';
+}
+
+function updateShareUrl() {
+  const url = location.origin + location.pathname + '?room=' + encodeURIComponent(roomId) + '&mode=viewer';
+  document.getElementById('shareUrl').textContent = url;
+}
+
+function copyShareUrl() {
+  const url = location.origin + location.pathname + '?room=' + encodeURIComponent(roomId) + '&mode=viewer';
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ Copié !';
+    setTimeout(() => { btn.textContent = '📋 Copier'; }, 2000);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   VIEWER
+═══════════════════════════════════════════════ */
+function joinViewer() {
+  const id = document.getElementById('viewerRoomInput').value.trim();
+  if (!id) return;
+  joinViewerWithId(id);
+}
+
+function joinViewerWithId(id) {
+  roomId = id;
+  showPage('viewer');
+  document.getElementById('viewerRoomDisplay').textContent = roomId;
+  document.getElementById('joinRoomBtn').classList.remove('hidden');
+  document.getElementById('viewerWaiting').classList.add('hidden');
+  history.replaceState({}, '', '?room=' + encodeURIComponent(id) + '&mode=viewer');
+}
+
+function connectViewer() {
+  document.getElementById('joinRoomBtn').classList.add('hidden');
+  document.getElementById('viewerWaiting').classList.remove('hidden');
+  setViewerStatus('connecting', 'Connexion...');
+  clearViewerError();
+  initPeer('viewer');
+}
+
+function connectToCaster(casterId) {
+  setViewerStatus('connecting', 'Connexion au diffuseur...');
+
+  // Viewers call the caster with a silent/empty stream
+  // We pass an empty audio track so PeerJS can establish bidirectional connection
+  const emptyStream = new MediaStream();
+  const call = myPeer.call(casterId, emptyStream);
+  currentCall = call;
+
+  if (!call) {
+    showViewerError('error', 'Connexion impossible', 'Le code de salle est incorrect ou le diffuseur est déconnecté.');
+    setViewerStatus('error');
+    return;
+  }
+
+  call.on('stream', (remoteStream) => {
+    if (!remoteStream || remoteStream.getTracks().length === 0) return;
+    const video = document.getElementById('viewerVideo');
+    video.srcObject = remoteStream;
+    video.style.display = 'block';
+    document.getElementById('viewerPlaceholder').style.display = 'none';
+    document.getElementById('viewerControls').style.display = 'flex';
+    document.getElementById('viewerWaiting').classList.add('hidden');
+    document.getElementById('viewerDot').classList.add('connected');
+    document.getElementById('viewerTitle').textContent = 'Réception en cours';
+    setViewerStatus('connected', 'Connecté');
+  });
+
+  call.on('close', () => {
+    setViewerStatus('disconnected', 'Diffuseur déconnecté');
+    document.getElementById('viewerDot').classList.remove('connected');
+    document.getElementById('viewerTitle').textContent = 'Déconnecté';
+    document.getElementById('viewerWaiting').classList.add('hidden');
+  });
+
+  call.on('error', (err) => {
+    showViewerError('error', 'Erreur de flux', String(err?.message || err));
+    setViewerStatus('error');
+  });
+
+  // Timeout if no stream arrives
+  setTimeout(() => {
+    const video = document.getElementById('viewerVideo');
+    if (!video.srcObject) {
+      document.getElementById('viewerWaiting').classList.add('hidden');
+      showViewerError('warning', 'Aucun flux reçu',
+        'Vérifiez que le diffuseur a bien démarré la diffusion et que les deux appareils sont sur le même Wi-Fi. Le code de salle peut aussi être incorrect.'
+      );
+      setViewerStatus('disconnected', 'Aucun flux');
+    }
+  }, 20000);
+}
+
+function setViewerStatus(s, label) {
+  const map = {
+    idle: { cls: 'idle', icon: '🔌', text: label || 'En attente' },
+    connecting: { cls: 'connecting', icon: '🔄', text: label || 'Connexion...' },
+    connected: { cls: 'connected', icon: '🔗', text: label || 'Connecté' },
+    disconnected: { cls: 'disconnected', icon: '📵', text: label || 'Déconnecté' },
+    error: { cls: 'error', icon: '⚠️', text: label || 'Erreur' },
+  };
+  const d = map[s] || map.idle;
+  const el = document.getElementById('viewerConnStatus');
+  el.className = 'conn-status ' + d.cls;
+  el.innerHTML = '<span>' + d.icon + '</span><span>' + d.text + '</span>';
+}
+
+function toggleMute() {
+  const video = document.getElementById('viewerVideo');
+  isMuted = !isMuted;
+  video.muted = isMuted;
+  document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+}
+
+function toggleFullscreen(id) {
+  const el = document.getElementById(id);
+  if (!document.fullscreenElement) {
+    el.requestFullscreen?.() || el.webkitRequestFullscreen?.();
+  } else {
+    document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   ERRORS
+═══════════════════════════════════════════════ */
+function showCaptureError(type, title, detail) {
+  const box = document.getElementById('captureErrorBox');
+  box.className = 'alert ' + type;
+  box.innerHTML = '<div class="alert-title">⚠ ' + title + '</div>' + detail;
+  box.classList.remove('hidden');
+}
+function clearCaptureError() {
+  document.getElementById('captureErrorBox').classList.add('hidden');
+}
+function showViewerError(type, title, detail) {
+  const box = document.getElementById('viewerErrorBox');
+  box.className = 'alert ' + type;
+  box.innerHTML = '<div class="alert-title">⚠ ' + title + '</div>' + detail;
+  box.classList.remove('hidden');
+}
+function clearViewerError() {
+  document.getElementById('viewerErrorBox').classList.add('hidden');
+}
+
+/* ═══════════════════════════════════════════════
+   CLEANUP
+═══════════════════════════════════════════════ */
+function cleanup() {
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (currentCall) { currentCall.close(); currentCall = null; }
+  if (myPeer) { myPeer.destroy(); myPeer = null; }
+  isMuted = false;
+
+  // Reset caster UI
+  const cv = document.getElementById('casterVideo');
+  if (cv) { cv.srcObject = null; cv.style.display = 'none'; }
+  document.getElementById('casterPlaceholder') && (document.getElementById('casterPlaceholder').style.display = '');
+  document.getElementById('liveBadge')?.classList.add('hidden');
+  document.getElementById('captureButtons') && (document.getElementById('captureButtons').style.display = '');
+  document.getElementById('stopCastBtn')?.classList.add('hidden');
+  clearCaptureError();
+
+  // Reset viewer UI
+  const vv = document.getElementById('viewerVideo');
+  if (vv) { vv.srcObject = null; vv.style.display = 'none'; }
+  document.getElementById('viewerPlaceholder') && (document.getElementById('viewerPlaceholder').style.display = '');
+  document.getElementById('viewerControls') && (document.getElementById('viewerControls').style.display = 'none');
+  document.getElementById('joinRoomBtn')?.classList.remove('hidden');
+  document.getElementById('viewerWaiting')?.classList.add('hidden');
+  clearViewerError();
+}
+</script>
+</body>
+</html>
