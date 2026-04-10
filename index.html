@@ -3,1595 +3,533 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Partage d'écran P2P - Partagez votre écran directement entre appareils">
-  <title>ScreenShare P2P - Partage d'écran</title>
-  
-  <!-- PeerJS CDN -->
+  <title>ScreenShare P2P - 100% Local</title>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  
   <style>
-    /* ==================== RESET & BASE ==================== */
-    *, *::before, *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --primary: #3b82f6;
-      --primary-dark: #1d4ed8;
-      --primary-light: #60a5fa;
-      --success: #22c55e;
-      --success-dark: #16a34a;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --info: #06b6d4;
-      
-      --bg-dark: #0f172a;
-      --bg-darker: #020617;
-      --bg-card: #1e293b;
-      --bg-card-hover: #334155;
-      --bg-input: #0f172a;
-      
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dark: #64748b;
-      
-      --border: #334155;
-      --border-focus: #3b82f6;
-      
-      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-      
-      --radius: 12px;
-      --radius-sm: 8px;
-      --radius-lg: 16px;
+      --primary: #3b82f6; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
+      --bg-dark: #0f172a; --bg-card: #1e293b; --text: #f8fafc; --text-muted: #94a3b8; --border: #334155;
     }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 50%, var(--bg-darker) 100%);
-      min-height: 100vh;
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-
-    /* ==================== LAYOUT ==================== */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ==================== HEADER ==================== */
-    .header {
-      text-align: center;
-      padding: 40px 20px 30px;
-    }
-
-    .logo {
-      display: inline-flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 12px;
-    }
-
-    .logo-icon {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      border-radius: var(--radius);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      box-shadow: var(--shadow-lg);
-    }
-
-    .logo h1 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--text) 0%, var(--primary-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .subtitle {
-      color: var(--text-muted);
-      font-size: 1.1rem;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-
-    /* ==================== CARDS ==================== */
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
-      max-width: 850px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      text-align: center;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, var(--primary), transparent);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .card:hover {
-      border-color: var(--primary);
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .card:hover::before {
-      opacity: 1;
-    }
-
-    .card-sender::before {
-      background: linear-gradient(90deg, transparent, var(--primary), transparent);
-    }
-
-    .card-receiver::before {
-      background: linear-gradient(90deg, transparent, var(--success), transparent);
-    }
-
-    .card-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 36px;
-      margin: 0 auto 20px;
-      transition: transform 0.3s;
-    }
-
-    .card:hover .card-icon {
-      transform: scale(1.1);
-    }
-
-    .card-sender .card-icon {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
-    }
-
-    .card-receiver .card-icon {
-      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
-    }
-
-    .card h2 {
-      font-size: 1.5rem;
-      margin-bottom: 10px;
-      font-weight: 700;
-    }
-
-    .card p {
-      color: var(--text-muted);
-      margin-bottom: 24px;
-      font-size: 0.95rem;
-    }
-
-    /* ==================== BUTTONS ==================== */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 14px 28px;
-      border-radius: var(--radius-sm);
-      border: none;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      width: 100%;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      transition: width 0.3s, height 0.3s;
-    }
-
-    .btn:active::after {
-      width: 200%;
-      height: 200%;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: white;
-      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-    }
-
-    .btn-success {
-      background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%);
-      color: white;
-      box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);
-    }
-
-    .btn-success:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
-    }
-
-    .btn-danger {
-      background: var(--danger);
-      color: white;
-    }
-
-    .btn-outline {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-
-    .btn-outline:hover:not(:disabled) {
-      background: var(--bg-card-hover);
-      border-color: var(--text-muted);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    .btn-small {
-      padding: 8px 16px;
-      font-size: 0.875rem;
-      width: auto;
-    }
-
-    /* ==================== INPUTS ==================== */
-    .input-group {
-      margin-bottom: 16px;
-    }
-
-    .input {
-      width: 100%;
-      padding: 16px 20px;
-      font-size: 1.75rem;
-      text-align: center;
-      letter-spacing: 12px;
-      background: var(--bg-input);
-      border: 2px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-family: 'SF Mono', Monaco, monospace;
-      font-weight: 700;
-      transition: all 0.2s;
-    }
-
-    .input:focus {
-      outline: none;
-      border-color: var(--border-focus);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-    }
-
-    .input::placeholder {
-      color: var(--text-dark);
-      opacity: 0.5;
-    }
-
-    /* ==================== VIEWS ==================== */
-    .view {
-      display: none;
-      animation: fadeIn 0.4s ease;
-      flex: 1;
-    }
-
-    .view.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ==================== STATUS BAR ==================== */
-    .status-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .status-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .back-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 1.5rem;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .back-btn:hover {
-      color: var(--text);
-      background: var(--bg-card-hover);
-    }
-
-    .status-title {
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      border: 1px solid var(--border);
-      background: var(--bg-input);
-    }
-
-    .status-badge .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    .status-badge.connected {
-      border-color: var(--success);
-      color: var(--success);
-    }
-
-    .status-badge.connected .dot {
-      background: var(--success);
-    }
-
-    .status-badge.connecting {
-      border-color: var(--warning);
-      color: var(--warning);
-    }
-
-    .status-badge.connecting .dot {
-      background: var(--warning);
-    }
-
-    .status-badge.disconnected {
-      border-color: var(--text-dark);
-      color: var(--text-muted);
-    }
-
-    .status-badge.disconnected .dot {
-      background: var(--text-dark);
-    }
-
-    .status-badge.error {
-      border-color: var(--danger);
-      color: var(--danger);
-    }
-
-    .status-badge.error .dot {
-      background: var(--danger);
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(1.1); }
-    }
-
-    /* ==================== ROOM CODE ==================== */
-    .room-code-container {
-      background: linear-gradient(135deg, var(--bg-input) 0%, var(--bg-card) 100%);
-      border: 2px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 32px;
-      text-align: center;
-      margin-bottom: 24px;
-      position: relative;
-    }
-
-    .room-code-label {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 16px;
-    }
-
-    .room-code {
-      font-size: 4rem;
-      font-weight: 800;
-      color: var(--primary);
-      letter-spacing: 16px;
-      font-family: 'SF Mono', Monaco, monospace;
-      text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
-      margin: 20px 0;
-      user-select: all;
-    }
-
-    .room-code-hint {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      margin-bottom: 20px;
-    }
-
-    .copy-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      background: var(--bg-card-hover);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-size: 0.95rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .copy-btn:hover {
-      background: var(--border);
-      border-color: var(--text-muted);
-    }
-
-    .copy-btn.copied {
-      background: var(--success);
-      border-color: var(--success);
-      color: white;
-    }
-
-    /* ==================== VIDEO CONTAINER ==================== */
-    .video-wrapper {
-      position: relative;
-      background: #000;
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    .video-wrapper video {
-      width: 100%;
-      height: auto;
-      max-height: 70vh;
-      display: block;
-      object-fit: contain;
-    }
-
-    .video-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      padding: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
-      pointer-events: none;
-    }
-
-    .video-overlay > * {
-      pointer-events: auto;
-    }
-
-    .live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--danger);
-      color: white;
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 0.875rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      animation: livePulse 2s infinite;
-    }
-
-    @keyframes livePulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.8; }
-    }
-
-    .live-badge::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: white;
-      border-radius: 50%;
-      animation: blink 1s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    .video-info {
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 0.875rem;
-      font-family: monospace;
-    }
-
-    /* ==================== PLACEHOLDER ==================== */
-    .placeholder-card {
-      background: var(--bg-card);
-      border: 2px dashed var(--border);
-      border-radius: var(--radius-lg);
-      padding: 48px 32px;
-      text-align: center;
-    }
-
-    .placeholder-icon {
-      font-size: 64px;
-      margin-bottom: 20px;
-      opacity: 0.5;
-    }
-
-    .placeholder-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .placeholder-text {
-      color: var(--text-muted);
-      margin-bottom: 24px;
-    }
-
-    /* ==================== WAITING STATE ==================== */
-    .waiting-state {
-      text-align: center;
-      padding: 48px 32px;
-    }
-
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 3px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 24px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .waiting-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .waiting-text {
-      color: var(--text-muted);
-    }
-
-    .waiting-code {
-      display: inline-block;
-      background: var(--bg-input);
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
-      font-family: monospace;
-      font-size: 1.25rem;
-      margin-top: 12px;
-      border: 1px solid var(--border);
-    }
-
-    /* ==================== ALERTS ==================== */
-    .alert {
-      padding: 16px 20px;
-      border-radius: var(--radius-sm);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: slideIn 0.3s ease;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .alert-error {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
-    }
-
-    .alert-success {
-      background: rgba(34, 197, 94, 0.15);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      color: #86efac;
-    }
-
-    .alert-info {
-      background: rgba(59, 130, 246, 0.15);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: #93c5fd;
-    }
-
-    /* ==================== FOOTER ==================== */
-    .footer {
-      text-align: center;
-      padding: 32px 20px;
-      color: var(--text-muted);
-      font-size: 0.875rem;
-      margin-top: auto;
-    }
-
-    .footer-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin: 0 16px;
-    }
-
-    /* ==================== DEBUG PANEL ==================== */
-    .debug-panel {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      max-width: 400px;
-      max-height: 300px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      z-index: 1000;
-      display: none;
-    }
-
-    .debug-panel.active {
-      display: block;
-    }
-
-    .debug-toggle {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 40px;
-      height: 40px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 1.25rem;
-      z-index: 1001;
-      transition: all 0.2s;
-    }
-
-    .debug-toggle:hover {
-      background: var(--bg-card-hover);
-    }
-
-    /* ==================== HIDDEN ==================== */
-    .hidden {
-      display: none !important;
-    }
-
-    /* ==================== RESPONSIVE ==================== */
-    @media (max-width: 768px) {
-      .logo h1 {
-        font-size: 1.75rem;
-      }
-
-      .room-code {
-        font-size: 2.5rem;
-        letter-spacing: 8px;
-      }
-
-      .status-bar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .status-bar > div:last-child {
-        width: 100%;
-        display: flex;
-        justify-content: flex-end;
-      }
-
-      .cards {
-        grid-template-columns: 1fr;
-      }
-
-      .video-overlay {
-        flex-direction: column;
-        gap: 8px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .container {
-        padding: 12px;
-      }
-
-      .header {
-        padding: 24px 12px;
-      }
-
-      .card {
-        padding: 24px;
-      }
-
-      .room-code {
-        font-size: 2rem;
-        letter-spacing: 4px;
-      }
-    }
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%);
+      min-height: 100vh; color: var(--text); line-height: 1.6;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+    
+    /* Header */
+    .header { text-align: center; padding: 30px 20px; }
+    .logo { display: inline-flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+    .logo-icon { width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary), #1d4ed8); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 10px 30px rgba(59,130,246,0.3); }
+    h1 { font-size: 2.2rem; font-weight: 800; }
+    .subtitle { color: var(--text-muted); font-size: 1.1rem; }
+    
+    /* Alertes */
+    .alert { padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; animation: slideIn 0.3s ease; }
+    .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+    .alert-warning { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #fcd34d; }
+    .alert-info { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
+    .alert-success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    
+    /* Cards */
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 20px; }
+    .card-title { font-size: 1.3rem; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+    .card-text { color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem; }
+    
+    /* Boutons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 24px; border-radius: 10px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%; margin-bottom: 10px; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), #1d4ed8); color: white; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+    .btn-success { background: linear-gradient(135deg, var(--success), #16a34a); color: white; box-shadow: 0 4px 15px rgba(34,197,94,0.4); }
+    .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-small { padding: 10px 16px; font-size: 0.875rem; width: auto; display: inline-flex; }
+    
+    /* Inputs */
+    .input { width: 100%; padding: 16px; font-size: 1.1rem; background: #0f172a; border: 2px solid var(--border); border-radius: 10px; color: var(--text); font-family: monospace; transition: all 0.2s; }
+    .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+    textarea.input { min-height: 120px; resize: vertical; font-size: 0.9rem; }
+    
+    /* Code box */
+    .code-box { background: #020617; border: 2px dashed var(--border); border-radius: 12px; padding: 20px; font-family: monospace; font-size: 0.85rem; word-break: break-all; color: var(--text-muted); position: relative; }
+    .code-box button { position: absolute; top: 10px; right: 10px; }
+    
+    /* Onglets */
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+    .tab { padding: 10px 20px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-weight: 600; border-radius: 8px; transition: all 0.2s; }
+    .tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .tab.active { color: var(--primary); background: rgba(59,130,246,0.1); }
+    
+    /* Status */
+    .status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; font-size: 0.875rem; border: 1px solid var(--border); }
+    .status.connected { border-color: var(--success); color: var(--success); background: rgba(34,197,94,0.1); }
+    .status.connecting { border-color: var(--warning); color: var(--warning); background: rgba(245,158,11,0.1); }
+    .status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* Video */
+    .video-container { background: #000; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; }
+    video { width: 100%; max-height: 70vh; display: block; }
+    .live-badge { position: absolute; top: 15px; left: 15px; background: var(--danger); color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 6px; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+    
+    .hidden { display: none !important; }
+    .section { margin-bottom: 30px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } h1 { font-size: 1.5rem; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- ==================== VIEW: HOME ==================== -->
-    <div id="view-home" class="view active">
-      <header class="header">
-        <div class="logo">
-          <div class="logo-icon">🖥️</div>
-          <h1>ScreenShare P2P</h1>
-        </div>
-        <p class="subtitle">Partagez votre écran directement entre appareils, sans serveur intermédiaire</p>
-      </header>
-
-      <div class="cards">
-        <!-- Sender Card -->
-        <div class="card card-sender" onclick="app.initSender()">
-          <div class="card-icon">📺</div>
-          <h2>Partager mon écran</h2>
-          <p>Créez une salle et partagez votre écran avec d'autres appareils</p>
-          <button class="btn btn-primary">Créer une salle</button>
-        </div>
-
-        <!-- Receiver Card -->
-        <div class="card card-receiver">
-          <div class="card-icon">📱</div>
-          <h2>Voir un écran</h2>
-          <p>Rejoignez une salle avec un code pour voir l'écran partagé</p>
-          <div class="input-group">
-            <input 
-              type="text" 
-              id="join-code" 
-              class="input" 
-              placeholder="______" 
-              maxlength="6"
-              autocomplete="off"
-              inputmode="numeric"
-            >
-          </div>
-          <button 
-            class="btn btn-success" 
-            onclick="app.joinRoom()" 
-            id="btn-join" 
-            disabled
-          >
-            Rejoindre la salle
-          </button>
-        </div>
+    <!-- HEADER -->
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">🖥️</div>
+        <h1>ScreenShare P2P</h1>
       </div>
-
-      <footer class="footer">
-        <span class="footer-item">🔗 Connexion P2P directe</span>
-        <span class="footer-item">👥 2 participants max</span>
-        <span class="footer-item">🔒 Chiffré de bout en bout</span>
-      </footer>
+      <p class="subtitle">Partage d'écran 100% local - Sans serveur - Direct P2P</p>
     </div>
 
-    <!-- ==================== VIEW: SENDER ==================== -->
-    <div id="view-sender" class="view">
-      <div class="status-bar">
-        <div class="status-left">
-          <button class="back-btn" onclick="app.goHome()" title="Retour">←</button>
-          <span class="status-title">📺 Mode Expéditeur</span>
-        </div>
-        <div>
-          <span id="sender-status" class="status-badge disconnected">
-            <span class="dot"></span>
-            <span class="text">Déconnecté</span>
-          </span>
-          <button class="btn btn-danger btn-small" onclick="app.goHome()" style="margin-left: 12px;">
-            Quitter
-          </button>
-        </div>
+    <!-- ALERTE FILE:// -->
+    <div id="file-alert" class="hidden">
+      <div class="alert alert-warning">
+        ⚠️ <strong>Mode fichier détecté !</strong> Le partage d'écran nécessite un serveur local. Choisissez une option ci-dessous :
       </div>
-
-      <div id="sender-alerts"></div>
-
-      <!-- Step 1: Show Room Code -->
-      <div id="sender-step1">
-        <div class="room-code-container">
-          <div class="room-code-label">Votre code de salle</div>
-          <div class="room-code" id="room-code-display">------</div>
-          <div class="room-code-hint">Partagez ce code avec la personne qui veut voir votre écran</div>
-          <button class="copy-btn" onclick="app.copyRoomCode()" id="copy-btn">
-            📋 Copier le code
-          </button>
+      
+      <div class="card">
+        <div class="card-title">🚀 Démarrer un serveur local (Simple)</div>
+        <div class="card-text">
+          Ouvrez un terminal dans ce dossier et exécutez une de ces commandes :
         </div>
-
-        <div class="placeholder-card">
-          <div class="placeholder-icon">📤</div>
-          <div class="placeholder-title">Démarrer le partage</div>
-          <div class="placeholder-text">Cliquez sur le bouton ci-dessous pour sélectionner l'écran à partager</div>
-          <button class="btn btn-primary" onclick="app.startScreenShare()" style="max-width: 320px;">
-            📺 Partager mon écran
-          </button>
+        <div class="code-box" style="margin-bottom: 15px;">
+          <strong>Python (recommandé) :</strong><br>
+          python3 -m http.server 8080
+          <button class="btn btn-small btn-outline" onclick="copyText('python3 -m http.server 8080')">Copier</button>
         </div>
-      </div>
-
-      <!-- Step 2: Sharing Screen -->
-      <div id="sender-step2" class="hidden">
-        <div class="video-wrapper">
-          <div class="video-overlay">
-            <span class="live-badge">En Direct</span>
-            <span class="video-info">Code: <span id="room-code-sharing"></span></span>
-          </div>
-          <video id="local-video" autoplay playsinline muted></video>
+        <div class="code-box" style="margin-bottom: 15px;">
+          <strong>Node.js :</strong><br>
+          npx http-server -p 8080
+          <button class="btn btn-small btn-outline" onclick="copyText('npx http-server -p 8080')">Copier</button>
         </div>
-
-        <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
-          <button class="btn btn-outline btn-small" onclick="app.stopScreenShare()">
-            ⏹️ Arrêter le partage
-          </button>
+        <div class="code-box">
+          <strong>PHP :</strong><br>
+          php -S localhost:8080
+          <button class="btn btn-small btn-outline" onclick="copyText('php -S localhost:8080')">Copier</button>
         </div>
-
-        <p id="sender-connection-msg" style="text-align: center; color: var(--text-muted); margin-top: 20px;">
-          ⏳ En attente d'un récepteur...
+        <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">
+          Puis ouvrez : <strong>http://localhost:8080</strong>
         </p>
       </div>
     </div>
 
-    <!-- ==================== VIEW: RECEIVER ==================== -->
-    <div id="view-receiver" class="view">
-      <div class="status-bar">
-        <div class="status-left">
-          <button class="back-btn" onclick="app.goHome()" title="Retour">←</button>
-          <span class="status-title">📱 Mode Récepteur</span>
+    <!-- ONGLETS -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('auto')" id="tab-auto">🌐 Mode Auto (Cloud)</button>
+      <button class="tab" onclick="showTab('manual')" id="tab-manual">🔗 Mode Manuel (100% Offline)</button>
+      <button class="tab" onclick="showTab('ip')" id="tab-ip">📡 Mode IP Local</button>
+    </div>
+
+    <!-- MODE AUTO (PeerJS Cloud) -->
+    <div id="content-auto" class="section">
+      <div class="card">
+        <div class="card-title">📺 Partager mon écran (Mode Cloud)</div>
+        <div class="card-text">
+          Utilise le serveur PeerJS gratuit pour la connexion. Fonctionne immédiatement si vous êtes sur HTTP/HTTPS.
         </div>
-        <div>
-          <span id="receiver-status" class="status-badge disconnected">
-            <span class="dot"></span>
-            <span class="text">Déconnecté</span>
-          </span>
-          <button class="btn btn-outline btn-small" onclick="app.toggleFullscreen()" style="margin-left: 12px;">
-            ⛶ Plein écran
-          </button>
-          <button class="btn btn-danger btn-small" onclick="app.goHome()" style="margin-left: 12px;">
-            Quitter
-          </button>
+        
+        <div id="auto-step1">
+          <button class="btn btn-primary" onclick="startAutoShare()">🚀 Créer une salle</button>
+        </div>
+        
+        <div id="auto-step2" class="hidden">
+          <div style="background: #020617; border: 2px solid var(--primary); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px;">
+            <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">Code de salle :</div>
+            <div id="auto-room-code" style="font-size: 3rem; font-weight: 800; color: var(--primary); font-family: monospace; letter-spacing: 8px;">------</div>
+            <button class="btn btn-small btn-outline" onclick="copyRoomCode()" style="margin-top: 15px;">📋 Copier</button>
+          </div>
+          
+          <button class="btn btn-success" onclick="startScreenShare()">📺 Démarrer le partage d'écran</button>
+          <div id="auto-video-container" class="video-container hidden">
+            <span class="live-badge">● Live</span>
+            <video id="auto-local-video" autoplay playsinline muted></video>
+          </div>
         </div>
       </div>
 
-      <div id="receiver-alerts"></div>
-
-      <!-- Waiting State -->
-      <div id="receiver-waiting" class="waiting-state">
-        <div class="spinner"></div>
-        <div class="waiting-title">Connexion en cours...</div>
-        <div class="waiting-text">
-          Salle: <span class="waiting-code" id="receiver-room-code"></span>
-        </div>
-        <div class="waiting-text" style="margin-top: 16px; font-size: 0.9rem;">
-          En attente que l'expéditeur démarre le partage d'écran
+      <div class="card">
+        <div class="card-title">📱 Recevoir un écran</div>
+        <input type="text" id="auto-join-code" class="input" placeholder="Entrez le code à 6 chiffres" maxlength="6" style="text-align: center; letter-spacing: 8px; font-size: 1.5rem; margin-bottom: 15px;">
+        <button class="btn btn-success" onclick="joinAutoRoom()" id="btn-auto-join" disabled>🔗 Se connecter</button>
+        <div id="auto-remote-video-container" class="video-container hidden" style="margin-top: 20px;">
+          <video id="auto-remote-video" autoplay playsinline style="width: 100%;"></video>
         </div>
       </div>
+    </div>
 
-      <!-- Video State -->
-      <div id="receiver-video" class="video-wrapper hidden">
-        <video id="remote-video" autoplay playsinline></video>
+    <!-- MODE MANUEL (SDP Exchange) -->
+    <div id="content-manual" class="section hidden">
+      <div class="alert alert-info">
+        ℹ️ <strong>Mode 100% Offline :</strong> Aucun serveur nécessaire. Copiez-collez les codes entre les appareils.
       </div>
+
+      <div class="grid-2">
+        <!-- Créateur -->
+        <div class="card">
+          <div class="card-title">📤 Envoyer mon écran</div>
+          
+          <div id="manual-step1">
+            <button class="btn btn-primary" onclick="createManualOffer()">1️⃣ Générer un code de connexion</button>
+          </div>
+          
+          <div id="manual-step2" class="hidden">
+            <div class="card-text" style="font-size: 0.85rem; color: var(--warning);">
+              <strong>Étape 1 :</strong> Copiez ce code et envoyez-le au receveur :
+            </div>
+            <div class="code-box" style="margin-bottom: 15px;">
+              <div id="manual-offer" style="max-height: 150px; overflow-y: auto;"></div>
+              <button class="btn btn-small btn-outline" onclick="copyOffer()">📋 Copier tout</button>
+            </div>
+            
+            <div class="card-text" style="font-size: 0.85rem; color: var(--warning);">
+              <strong>Étape 2 :</strong> Collez la réponse du receveur ici :
+            </div>
+            <textarea id="manual-answer-input" class="input" placeholder="Collez la réponse ici..."></textarea>
+            <button class="btn btn-success" onclick="acceptManualAnswer()" style="margin-top: 10px;">2️⃣ Connecter</button>
+          </div>
+          
+          <div id="manual-step3" class="hidden">
+            <div class="status connected" style="margin-bottom: 15px;">● Connecté</div>
+            <button class="btn btn-primary" onclick="startManualShare()">📺 Partager l'écran</button>
+            <div id="manual-video-container" class="video-container hidden" style="margin-top: 15px;">
+              <span class="live-badge">● Live</span>
+              <video id="manual-local-video" autoplay playsinline muted></video>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receveur -->
+        <div class="card">
+          <div class="card-title">📥 Recevoir un écran</div>
+          
+          <div id="receive-step1">
+            <div class="card-text" style="font-size: 0.85rem;">
+              Collez le code de connexion de l'expéditeur :
+            </div>
+            <textarea id="receive-offer-input" class="input" placeholder="Collez le code ici..."></textarea>
+            <button class="btn btn-success" onclick="createManualAnswer()" style="margin-top: 10px;">1️⃣ Générer la réponse</button>
+          </div>
+          
+          <div id="receive-step2" class="hidden">
+            <div class="card-text" style="font-size: 0.85rem; color: var(--warning);">
+              <strong>Envoyez ce code à l'expéditeur :</strong>
+            </div>
+            <div class="code-box">
+              <div id="manual-answer" style="max-height: 150px; overflow-y: auto;"></div>
+              <button class="btn btn-small btn-outline" onclick="copyAnswer()">📋 Copier</button>
+            </div>
+            <div class="status connecting" style="margin-top: 15px;">● En attente de connexion...</div>
+          </div>
+          
+          <div id="receive-step3" class="hidden">
+            <div class="status connected" style="margin-bottom: 15px;">● Connecté - Réception...</div>
+            <div id="receive-video-container" class="video-container">
+              <video id="manual-remote-video" autoplay playsinline style="width: 100%;"></video>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODE IP -->
+    <div id="content-ip" class="section hidden">
+      <div class="card">
+        <div class="card-title">📡 Connexion par IP (Même réseau WiFi)</div>
+        <div class="card-text">
+          Pour les appareils sur le même réseau local. L'expéditeur doit être accessible via son IP.
+        </div>
+        
+        <div class="grid-2">
+          <div>
+            <div style="color: var(--text-muted); margin-bottom: 8px; font-size: 0.9rem;">Votre IP locale :</div>
+            <div id="my-ip" style="font-size: 1.5rem; font-weight: 700; color: var(--primary); font-family: monospace; margin-bottom: 15px;">Détection...</div>
+            <button class="btn btn-primary" onclick="detectIP()">🔄 Actualiser IP</button>
+          </div>
+          <div>
+            <div style="color: var(--text-muted); margin-bottom: 8px; font-size: 0.9rem;">IP du receveur :</div>
+            <input type="text" id="target-ip" class="input" placeholder="192.168.1.xxx" style="margin-bottom: 10px;">
+            <button class="btn btn-success" onclick="connectByIP()">🔗 Connecter</button>
+          </div>
+        </div>
+        
+        <div id="ip-status" style="margin-top: 20px;"></div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.85rem;">
+      <p>🔒 Connexion chiffrée P2P | 👥 2 participants max | 📱 Compatible tous appareils</p>
+      <p style="margin-top: 10px; font-size: 0.75rem;">
+        Mode Manuel = 100% offline | Mode Auto = Nécessite internet pour la signalisation uniquement
+      </p>
     </div>
   </div>
 
-  <!-- Debug Toggle -->
-  <div class="debug-toggle" onclick="app.toggleDebug()" title="Debug">🐛</div>
-  
-  <!-- Debug Panel -->
-  <div class="debug-panel" id="debug-panel">
-    <strong>Debug Logs:</strong>
-    <div id="debug-logs"></div>
-  </div>
-
-  <!-- ==================== JAVASCRIPT ==================== -->
   <script>
-    /**
-     * ScreenShare P2P Application
-     * Utilise PeerJS pour la signalisation et WebRTC pour le flux P2P
-     */
-    const app = {
-      // Configuration PeerJS - Utilise le serveur cloud gratuit
-      config: {
+    // ==================== UTILITAIRES ====================
+    const $ = id => document.getElementById(id);
+    
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => alert('Copié !'));
+    }
+    
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+      $(`tab-${tab}`).classList.add('active');
+      $(`content-${tab}`).classList.remove('hidden');
+    }
+    
+    // Détection du mode fichier
+    if (window.location.protocol === 'file:') {
+      $('file-alert').classList.remove('hidden');
+    }
+    
+    // ==================== MODE AUTO (PeerJS) ====================
+    let autoPeer = null;
+    let autoCall = null;
+    let autoStream = null;
+    let roomCode = null;
+    
+    function startAutoShare() {
+      roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+      $('auto-room-code').textContent = roomCode;
+      $('auto-step1').classList.add('hidden');
+      $('auto-step2').classList.remove('hidden');
+      
+      // Créer le peer
+      autoPeer = new Peer(roomCode, {
         host: '0.peerjs.com',
         port: 443,
         secure: true,
-        debug: 2,
         config: {
           iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
           ]
         }
-      },
-
-      // État de l'application
-      state: {
-        peer: null,
-        call: null,
-        localStream: null,
-        roomCode: null,
-        isSender: false,
-        connectionState: 'disconnected'
-      },
-
-      // ==================== INITIALISATION ====================
-      init() {
-        this.log('🖥️ ScreenShare P2P initialisé');
-        this.log('📡 Configuration PeerJS:', this.config.host);
-        
-        // Vérifier la compatibilité du navigateur
-        this.checkBrowserSupport();
-        
-        // Configurer les écouteurs d'événements
-        this.setupEventListeners();
-      },
-
-      checkBrowserSupport() {
-        const checks = {
-          webRTC: typeof RTCPeerConnection !== 'undefined',
-          getDisplayMedia: typeof navigator.mediaDevices?.getDisplayMedia !== 'undefined',
-          peerJS: typeof Peer !== 'undefined'
-        };
-
-        this.log('✅ Vérification du navigateur:', checks);
-
-        if (!checks.webRTC) {
-          this.showAlert('home', 'Votre navigateur ne supporte pas WebRTC', 'error');
-        }
-        if (!checks.getDisplayMedia) {
-          this.showAlert('home', 'Votre navigateur ne supporte pas le partage d\'écran', 'error');
-        }
-      },
-
-      setupEventListeners() {
-        // Input du code de salle
-        const joinCodeInput = document.getElementById('join-code');
-        if (joinCodeInput) {
-          joinCodeInput.addEventListener('input', (e) => {
-            // N'accepter que les chiffres
-            const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-            e.target.value = value;
-            
-            // Activer/désactiver le bouton
-            const btn = document.getElementById('btn-join');
-            btn.disabled = value.length !== 6;
-          });
-
-          // Permettre d'appuyer sur Entrée
-          joinCodeInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.target.value.length === 6) {
-              this.joinRoom();
-            }
-          });
-        }
-
-        // Gestion des raccourcis clavier
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && document.fullscreenElement) {
-            document.exitFullscreen();
-          }
-        });
-      },
-
-      // ==================== NAVIGATION ====================
-      showView(viewName) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        const view = document.getElementById(`view-${viewName}`);
-        if (view) {
-          view.classList.add('active');
-          this.log('📱 Vue changée:', viewName);
-        }
-      },
-
-      goHome() {
-        this.cleanup();
-        this.showView('home');
-        
-        // Réinitialiser les inputs
-        const joinCodeInput = document.getElementById('join-code');
-        if (joinCodeInput) {
-          joinCodeInput.value = '';
-        }
-        const joinBtn = document.getElementById('btn-join');
-        if (joinBtn) {
-          joinBtn.disabled = true;
-        }
-      },
-
-      // ==================== NETTOYAGE ====================
-      cleanup() {
-        this.log('🧹 Nettoyage...');
-
-        // Fermer l'appel
-        if (this.state.call) {
-          this.state.call.close();
-          this.state.call = null;
-        }
-
-        // Arrêter le flux local
-        if (this.state.localStream) {
-          this.state.localStream.getTracks().forEach(track => {
-            track.stop();
-            this.log('⏹️ Track arrêté:', track.kind);
-          });
-          this.state.localStream = null;
-        }
-
-        // Détruire le peer
-        if (this.state.peer) {
-          this.state.peer.destroy();
-          this.state.peer = null;
-        }
-
-        // Réinitialiser l'état
-        this.state.roomCode = null;
-        this.state.isSender = false;
-        this.state.connectionState = 'disconnected';
-
-        // Réinitialiser l'UI
-        this.resetUI();
-      },
-
-      resetUI() {
-        // Sender
-        const step1 = document.getElementById('sender-step1');
-        const step2 = document.getElementById('sender-step2');
-        const localVideo = document.getElementById('local-video');
-        
-        if (step1) step1.classList.remove('hidden');
-        if (step2) step2.classList.add('hidden');
-        if (localVideo) localVideo.srcObject = null;
-
-        // Receiver
-        const waiting = document.getElementById('receiver-waiting');
-        const videoContainer = document.getElementById('receiver-video');
-        const remoteVideo = document.getElementById('remote-video');
-        
-        if (waiting) waiting.classList.remove('hidden');
-        if (videoContainer) videoContainer.classList.add('hidden');
-        if (remoteVideo) remoteVideo.srcObject = null;
-
-        // Status
-        this.updateStatus('sender-status', 'disconnected', 'Déconnecté');
-        this.updateStatus('receiver-status', 'disconnected', 'Déconnecté');
-
-        // Messages
-        const senderMsg = document.getElementById('sender-connection-msg');
-        if (senderMsg) senderMsg.textContent = '⏳ En attente d\'un récepteur...';
-      },
-
-      // ==================== UTILITAIRES UI ====================
-      updateStatus(elementId, state, text) {
-        const badge = document.getElementById(elementId);
-        if (badge) {
-          badge.className = `status-badge ${state}`;
-          const textEl = badge.querySelector('.text');
-          if (textEl) textEl.textContent = text;
-        }
-        this.state.connectionState = state;
-      },
-
-      showAlert(view, message, type = 'error') {
-        const container = document.getElementById(`${view}-alerts`);
-        if (!container) return;
-
-        const icons = {
-          error: '⚠️',
-          success: '✅',
-          info: 'ℹ️'
-        };
-
-        const alert = document.createElement('div');
-        alert.className = `alert alert-${type}`;
-        alert.innerHTML = `${icons[type] || 'ℹ️'} ${message}`;
-        
-        container.innerHTML = '';
-        container.appendChild(alert);
-
-        // Auto-supprimer après 5 secondes
-        setTimeout(() => {
-          alert.remove();
-        }, 5000);
-      },
-
-      // ==================== SENDER ====================
-      initSender() {
-        this.log('🎬 Initialisation du mode expéditeur...');
-        
-        this.state.isSender = true;
-        this.state.roomCode = this.generateRoomCode();
-        
-        // Afficher le code
-        const codeDisplay = document.getElementById('room-code-display');
-        const codeSharing = document.getElementById('room-code-sharing');
-        if (codeDisplay) codeDisplay.textContent = this.state.roomCode;
-        if (codeSharing) codeSharing.textContent = this.state.roomCode;
-
-        this.showView('sender');
-        this.updateStatus('sender-status', 'connecting', 'Connexion...');
-
-        // Créer le peer avec le code comme ID
-        try {
-          this.state.peer = new Peer(this.state.roomCode, this.config);
-          this.setupPeerListeners();
-        } catch (err) {
-          this.log('❌ Erreur création Peer:', err);
-          this.showAlert('sender', 'Erreur de connexion: ' + err.message, 'error');
-          this.updateStatus('sender-status', 'error', 'Erreur');
-        }
-      },
-
-      setupPeerListeners() {
-        const peer = this.state.peer;
-        if (!peer) return;
-
-        peer.on('open', (id) => {
-          this.log('✅ Peer ouvert avec ID:', id);
-          this.updateStatus('sender-status', 'connecting', 'En attente...');
-        });
-
-        peer.on('call', (call) => {
-          this.log('📞 Appel entrant de:', call.peer);
-          
-          if (!this.state.localStream) {
-            this.log('⚠️ Pas de stream local, refus de l\'appel');
-            call.close();
-            return;
-          }
-
-          this.state.call = call;
-          
-          // Répondre avec le stream local
-          call.answer(this.state.localStream);
-          this.log('✅ Appel répondu');
-
-          call.on('stream', (remoteStream) => {
-            this.log('📹 Stream reçu du récepteur');
-            // Le sender n'a pas besoin du stream du receiver (receiver n'envoie pas de vidéo)
-          });
-
-          call.on('close', () => {
-            this.log('📴 Appel fermé');
-            this.state.call = null;
-            this.updateStatus('sender-status', 'connecting', 'En attente...');
-            
-            const msg = document.getElementById('sender-connection-msg');
-            if (msg) msg.textContent = '⏳ En attente d\'un récepteur...';
-          });
-
-          call.on('error', (err) => {
-            this.log('❌ Erreur appel:', err);
-            this.showAlert('sender', 'Erreur de connexion', 'error');
-          });
-
-          // Mettre à jour le statut
-          this.updateStatus('sender-status', 'connected', 'Connecté');
-          const msg = document.getElementById('sender-connection-msg');
-          if (msg) {
-            msg.innerHTML = '✅ <strong>Un récepteur est connecté et voit votre écran</strong>';
-          }
-        });
-
-        peer.on('error', (err) => {
-          this.log('❌ Erreur Peer:', err.type, err.message);
-          
-          if (err.type === 'unavailable-id') {
-            // Le code existe déjà, générer un nouveau
-            this.log('🔄 Code déjà utilisé, régénération...');
-            this.state.roomCode = this.generateRoomCode();
-            
-            const codeDisplay = document.getElementById('room-code-display');
-            const codeSharing = document.getElementById('room-code-sharing');
-            if (codeDisplay) codeDisplay.textContent = this.state.roomCode;
-            if (codeSharing) codeSharing.textContent = this.state.roomCode;
-            
-            // Recréer le peer
-            peer.destroy();
-            setTimeout(() => this.initSender(), 500);
-          } else if (err.type === 'network') {
-            this.showAlert('sender', 'Erreur réseau. Vérifiez votre connexion.', 'error');
-            this.updateStatus('sender-status', 'error', 'Erreur réseau');
-          } else if (err.type === 'server-error') {
-            this.showAlert('sender', 'Erreur serveur PeerJS. Réessayez.', 'error');
-            this.updateStatus('sender-status', 'error', 'Erreur serveur');
-          } else {
-            this.showAlert('sender', 'Erreur: ' + err.message, 'error');
-            this.updateStatus('sender-status', 'error', 'Erreur');
-          }
-        });
-
-        peer.on('disconnected', () => {
-          this.log('⚠️ Peer déconnecté');
-          this.updateStatus('sender-status', 'disconnected', 'Déconnecté');
-        });
-
-        peer.on('close', () => {
-          this.log('📴 Peer fermé');
-          this.updateStatus('sender-status', 'disconnected', 'Déconnecté');
-        });
-      },
-
-      async startScreenShare() {
-        this.log('🎥 Démarrage du partage d\'écran...');
-
-        try {
-          // Vérifier que getDisplayMedia est disponible
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-            throw new Error('getDisplayMedia non supporté par ce navigateur');
-          }
-
-          // Demander le partage d'écran
-          this.state.localStream = await navigator.mediaDevices.getDisplayMedia({
-            video: {
-              cursor: 'always',
-              displaySurface: 'monitor'
-            },
-            audio: true
-          });
-
-          this.log('✅ Stream obtenu:', this.state.localStream.getTracks().map(t => t.kind).join(', '));
-
-          // Afficher la preview
-          const video = document.getElementById('local-video');
-          if (video) {
-            video.srcObject = this.state.localStream;
-          }
-
-          // Changer de vue
-          const step1 = document.getElementById('sender-step1');
-          const step2 = document.getElementById('sender-step2');
-          if (step1) step1.classList.add('hidden');
-          if (step2) step2.classList.remove('hidden');
-
-          // Écouter la fin du partage
-          this.state.localStream.getVideoTracks().forEach(track => {
-            track.onended = () => {
-              this.log('⏹️ Partage arrêté par l\'utilisateur');
-              this.stopScreenShare();
-            };
-          });
-
-          // Si un receiver est déjà connecté, mettre à jour l'appel
-          if (this.state.call && this.state.call.peerConnection) {
-            this.log('🔄 Mise à jour de l\'appel existant');
-            const senders = this.state.call.peerConnection.getSenders();
-            this.state.localStream.getTracks().forEach(track => {
-              const sender = senders.find(s => s.track?.kind === track.kind);
-              if (sender) {
-                sender.replaceTrack(track);
-              }
-            });
-          }
-
-          this.showAlert('sender', 'Partage d\'écran démarré !', 'success');
-
-        } catch (err) {
-          this.log('❌ Erreur partage d\'écran:', err.name, err.message);
-          
-          let message = 'Impossible de partager l\'écran';
-          if (err.name === 'NotAllowedError') {
-            message = 'Permission refusée. Vous devez autoriser le partage d\'écran.';
-          } else if (err.name === 'NotFoundError') {
-            message = 'Aucun écran trouvé à partager.';
-          } else if (err.name === 'NotSupportedError') {
-            message = 'Votre navigateur ne supporte pas le partage d\'écran.';
-          }
-          
-          this.showAlert('sender', message, 'error');
-        }
-      },
-
-      stopScreenShare() {
-        this.log('⏹️ Arrêt du partage d\'écran');
-
-        if (this.state.localStream) {
-          this.state.localStream.getTracks().forEach(track => track.stop());
-          this.state.localStream = null;
-        }
-
-        const step1 = document.getElementById('sender-step1');
-        const step2 = document.getElementById('sender-step2');
-        const video = document.getElementById('local-video');
-        
-        if (step1) step1.classList.remove('hidden');
-        if (step2) step2.classList.add('hidden');
-        if (video) video.srcObject = null;
-
-        // Mettre à jour le message
-        const msg = document.getElementById('sender-connection-msg');
-        if (msg) msg.textContent = '⏳ En attente d\'un récepteur...';
-      },
-
-      copyRoomCode() {
-        if (!this.state.roomCode) return;
-
-        navigator.clipboard.writeText(this.state.roomCode).then(() => {
-          const btn = document.getElementById('copy-btn');
-          if (btn) {
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '✅ Copié !';
-            btn.classList.add('copied');
-            
-            setTimeout(() => {
-              btn.innerHTML = originalText;
-              btn.classList.remove('copied');
-            }, 2000);
-          }
-          this.log('📋 Code copié:', this.state.roomCode);
-        }).catch(err => {
-          this.log('❌ Erreur copie:', err);
-          // Fallback: sélectionner le texte
-          const codeEl = document.getElementById('room-code-display');
-          if (codeEl) {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(codeEl);
-            selection.removeAllRanges();
-            selection.addRange(range);
-          }
-        });
-      },
-
-      // ==================== RECEIVER ====================
-      joinRoom() {
-        const codeInput = document.getElementById('join-code');
-        const code = codeInput ? codeInput.value.trim() : '';
-
-        if (code.length !== 6) {
-          this.showAlert('home', 'Veuillez entrer un code à 6 chiffres', 'error');
-          return;
-        }
-
-        this.log('📱 Connexion à la salle:', code);
-        
-        this.state.isSender = false;
-        this.state.roomCode = code;
-
-        // Afficher le code dans la vue receiver
-        const receiverCode = document.getElementById('receiver-room-code');
-        if (receiverCode) receiverCode.textContent = code;
-
-        this.showView('receiver');
-        this.updateStatus('receiver-status', 'connecting', 'Connexion...');
-
-        // Créer un peer avec un ID aléatoire
-        const receiverId = 'recv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-        
-        try {
-          this.state.peer = new Peer(receiverId, this.config);
-          
-          this.state.peer.on('open', (id) => {
-            this.log('✅ Receiver peer ouvert:', id);
-            
-            // Attendre un peu que le peer soit prêt
-            setTimeout(() => {
-              this.callSender(code);
-            }, 1500);
-          });
-
-          this.state.peer.on('error', (err) => {
-            this.log('❌ Erreur receiver peer:', err);
-            this.showAlert('receiver', 'Erreur de connexion: ' + err.message, 'error');
-            this.updateStatus('receiver-status', 'error', 'Erreur');
-          });
-
-        } catch (err) {
-          this.log('❌ Erreur création receiver peer:', err);
-          this.showAlert('receiver', 'Erreur de connexion', 'error');
-        }
-      },
-
-      callSender(senderId) {
-        this.log('📞 Appel du sender:', senderId);
-
-        if (!this.state.peer) {
-          this.showAlert('receiver', 'Peer non initialisé', 'error');
-          return;
-        }
-
-        try {
-          // Créer un flux vide (le receiver n'envoie pas de vidéo)
-          const emptyStream = new MediaStream();
-          
-          // Appeler le sender
-          this.state.call = this.state.peer.call(senderId, emptyStream);
-
-          if (!this.state.call) {
-            this.showAlert('receiver', 'Impossible de se connecter. Vérifiez le code.', 'error');
-            this.updateStatus('receiver-status', 'error', 'Erreur');
-            return;
-          }
-
-          this.log('✅ Appel créé, en attente du stream...');
-
-          this.state.call.on('stream', (stream) => {
-            this.log('📹 Stream reçu ! Tracks:', stream.getTracks().map(t => t.kind).join(', '));
-            
-            // Afficher la vidéo
-            const video = document.getElementById('remote-video');
-            if (video) {
-              video.srcObject = stream;
-              
-              // Gestion des erreurs de lecture
-              video.onerror = (e) => {
-                this.log('❌ Erreur vidéo:', e);
-              };
-            }
-
-            // Changer l'affichage
-            const waiting = document.getElementById('receiver-waiting');
-            const videoContainer = document.getElementById('receiver-video');
-            
-            if (waiting) waiting.classList.add('hidden');
-            if (videoContainer) videoContainer.classList.remove('hidden');
-
-            this.updateStatus('receiver-status', 'connected', 'Connecté');
-            this.showAlert('receiver', 'Connecté ! Recevant le stream...', 'success');
-          });
-
-          this.state.call.on('close', () => {
-            this.log('📴 Appel fermé');
-            this.state.call = null;
-            
-            const waiting = document.getElementById('receiver-waiting');
-            const videoContainer = document.getElementById('receiver-video');
-            const video = document.getElementById('remote-video');
-            
-            if (waiting) waiting.classList.remove('hidden');
-            if (videoContainer) videoContainer.classList.add('hidden');
-            if (video) video.srcObject = null;
-
-            this.updateStatus('receiver-status', 'disconnected', 'Déconnecté');
-            this.showAlert('receiver', 'L\'expéditeur a arrêté le partage', 'info');
-          });
-
-          this.state.call.on('error', (err) => {
-            this.log('❌ Erreur appel:', err);
-            this.showAlert('receiver', 'Erreur de connexion', 'error');
-            this.updateStatus('receiver-status', 'error', 'Erreur');
-          });
-
-        } catch (err) {
-          this.log('❌ Erreur lors de l\'appel:', err);
-          this.showAlert('receiver', 'Erreur: ' + err.message, 'error');
-        }
-      },
-
-      // ==================== UTILITAIRES ====================
-      generateRoomCode() {
-        // Générer un code à 6 chiffres
-        return Math.floor(100000 + Math.random() * 900000).toString();
-      },
-
-      toggleFullscreen() {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(err => {
-            this.log('❌ Erreur plein écran:', err);
-          });
-        } else {
-          document.exitFullscreen();
-        }
-      },
-
-      // ==================== DEBUG ====================
-      logs: [],
+      });
       
-      log(...args) {
-        const message = args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-        ).join(' ');
-        
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = `[${timestamp}] ${message}`;
-        
-        this.logs.push(logEntry);
-        console.log(...args);
-        
-        // Mettre à jour le panel debug
-        const debugLogs = document.getElementById('debug-logs');
-        if (debugLogs) {
-          debugLogs.innerHTML = this.logs.slice(-20).join('<br>');
+      autoPeer.on('call', (call) => {
+        if (!autoStream) {
+          call.close();
+          return;
         }
-      },
-
-      toggleDebug() {
-        const panel = document.getElementById('debug-panel');
-        if (panel) {
-          panel.classList.toggle('active');
+        autoCall = call;
+        call.answer(autoStream);
+        call.on('stream', (remoteStream) => {
+          console.log('Stream reçu');
+        });
+      });
+    }
+    
+    async function startScreenShare() {
+      try {
+        // Vérifier si on est en file://
+        if (window.location.protocol === 'file:') {
+          alert('❌ Impossible en mode fichier !\n\nUtilisez le Mode Manuel (100% offline) ou lancez un serveur local avec :\npython3 -m http.server 8080');
+          return;
         }
+        
+        autoStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { cursor: 'always' },
+          audio: true
+        });
+        
+        $('auto-local-video').srcObject = autoStream;
+        $('auto-video-container').classList.remove('hidden');
+        
+        autoStream.getVideoTracks()[0].onended = () => {
+          $('auto-video-container').classList.add('hidden');
+          autoStream = null;
+        };
+        
+      } catch (err) {
+        alert('Erreur : ' + err.message + '\n\nConseil : Utilisez le Mode Manuel ci-dessus');
       }
-    };
-
-    // ==================== INITIALISATION ====================
-    document.addEventListener('DOMContentLoaded', () => {
-      app.init();
+    }
+    
+    function copyRoomCode() {
+      copyText(roomCode);
+    }
+    
+    // Rejoindre mode auto
+    $('auto-join-code').addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+      $('btn-auto-join').disabled = e.target.value.length !== 6;
     });
-
-    // Exposer l'app globalement pour le débogage
-    window.app = app;
+    
+    function joinAutoRoom() {
+      const code = $('auto-join-code').value;
+      const peerId = 'recv_' + Date.now();
+      
+      const peer = new Peer(peerId, {
+        host: '0.peerjs.com',
+        port: 443,
+        secure: true
+      });
+      
+      peer.on('open', () => {
+        const call = peer.call(code, new MediaStream());
+        if (call) {
+          call.on('stream', (stream) => {
+            $('auto-remote-video').srcObject = stream;
+            $('auto-remote-video-container').classList.remove('hidden');
+          });
+        }
+      });
+    }
+    
+    // ==================== MODE MANUEL (SDP) ====================
+    let manualPC = null;
+    let manualStream = null;
+    
+    async function createManualOffer() {
+      manualPC = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      
+      // Créer l'offre
+      const offer = await manualPC.createOffer();
+      await manualPC.setLocalDescription(offer);
+      
+      // Attendre les candidats ICE
+      await new Promise(resolve => {
+        if (manualPC.iceGatheringState === 'complete') resolve();
+        manualPC.onicegatheringstatechange = () => {
+          if (manualPC.iceGatheringState === 'complete') resolve();
+        };
+        setTimeout(resolve, 2000); // Timeout de secours
+      });
+      
+      const offerStr = btoa(JSON.stringify(manualPC.localDescription));
+      $('manual-offer').textContent = offerStr;
+      $('manual-step1').classList.add('hidden');
+      $('manual-step2').classList.remove('hidden');
+    }
+    
+    function copyOffer() {
+      copyText($('manual-offer').textContent);
+    }
+    
+    async function acceptManualAnswer() {
+      const answerStr = $('manual-answer-input').value.trim();
+      if (!answerStr) return alert('Collez la réponse d\'abord !');
+      
+      try {
+        const answer = JSON.parse(atob(answerStr));
+        await manualPC.setRemoteDescription(answer);
+        
+        $('manual-step2').classList.add('hidden');
+        $('manual-step3').classList.remove('hidden');
+        
+        manualPC.onicecandidate = (e) => {
+          if (!e.candidate) console.log('ICE terminé');
+        };
+        
+      } catch (e) {
+        alert('Code invalide !');
+      }
+    }
+    
+    async function startManualShare() {
+      try {
+        manualStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+        
+        manualStream.getTracks().forEach(track => {
+          manualPC.addTrack(track, manualStream);
+        });
+        
+        $('manual-local-video').srcObject = manualStream;
+        $('manual-video-container').classList.remove('hidden');
+        
+      } catch (err) {
+        alert('Erreur partage : ' + err.message);
+      }
+    }
+    
+    // Receveur manuel
+    let receivePC = null;
+    
+    async function createManualAnswer() {
+      const offerStr = $('receive-offer-input').value.trim();
+      if (!offerStr) return alert('Collez le code de connexion !');
+      
+      try {
+        const offer = JSON.parse(atob(offerStr));
+        
+        receivePC = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
+        
+        receivePC.ontrack = (e) => {
+          $('manual-remote-video').srcObject = e.streams[0];
+          $('receive-step2').classList.add('hidden');
+          $('receive-step3').classList.remove('hidden');
+        };
+        
+        await receivePC.setRemoteDescription(offer);
+        
+        const answer = await receivePC.createAnswer();
+        await receivePC.setLocalDescription(answer);
+        
+        // Attendre ICE
+        await new Promise(resolve => {
+          if (receivePC.iceGatheringState === 'complete') resolve();
+          receivePC.onicegatheringstatechange = () => {
+            if (receivePC.iceGatheringState === 'complete') resolve();
+          };
+          setTimeout(resolve, 2000);
+        });
+        
+        const answerStr = btoa(JSON.stringify(receivePC.localDescription));
+        $('manual-answer').textContent = answerStr;
+        $('receive-step1').classList.add('hidden');
+        $('receive-step2').classList.remove('hidden');
+        
+      } catch (e) {
+        alert('Code invalide ! Détails : ' + e.message);
+      }
+    }
+    
+    function copyAnswer() {
+      copyText($('manual-answer').textContent);
+    }
+    
+    // ==================== MODE IP ====================
+    function detectIP() {
+      // Utiliser une API pour détecter l'IP (pour info uniquement)
+      fetch('https://api.ipify.org?format=json')
+        .then(r => r.json())
+        .then(data => {
+          $('my-ip').textContent = data.ip + ' (Publique)';
+        })
+        .catch(() => {
+          $('my-ip').textContent = '192.168.x.x (Locale)';
+        });
+    }
+    
+    detectIP();
+    
+    function connectByIP() {
+      const ip = $('target-ip').value;
+      if (!ip) return alert('Entrez une IP !');
+      $('ip-status').innerHTML = `<div class="alert alert-info">Connexion à ${ip}... (En développement)</div>`;
+    }
   </script>
 </body>
 </html>
