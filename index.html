@@ -228,6 +228,38 @@
     .ctrl-btn .ctrl-ic { font-size:22px; }
     .ctrl-btn .ctrl-lbl { font-size:10px; font-weight:600; color:var(--muted); }
     .ctrl-btn.active .ctrl-lbl { color:var(--danger); }
+
+    /* ── BIDIRECTIONAL VIDEO CALL — inset overlay ── */
+    .vcall-inset {
+      position:absolute; bottom:10px; right:10px;
+      width:88px; height:118px;
+      border-radius:11px; border:2px solid rgba(255,255,255,.45);
+      object-fit:cover; z-index:10; background:#111;
+      box-shadow:0 4px 16px rgba(0,0,0,.6);
+      cursor:grab;
+      display:none;
+    }
+    .vcall-inset-label {
+      position:absolute; bottom:10px; right:10px;
+      background:rgba(0,0,0,.55); color:#fff;
+      font-size:9px; font-weight:700; padding:2px 6px;
+      border-radius:0 0 9px 0; z-index:11; pointer-events:none;
+      display:none;
+    }
+    /* Receiver call controls bar */
+    #rcv-call-ctrl {
+      display:none; margin-top:12px;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:12px; padding:14px 16px;
+    }
+    .vcall-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(34,211,168,.15); border:1px solid rgba(34,211,168,.3);
+      color:#22d3a8; font-size:11px; font-weight:700;
+      border-radius:20px; padding:4px 10px; margin-bottom:10px;
+    }
+    .vcall-badge::before { content:''; width:7px; height:7px; border-radius:50%;
+      background:#22d3a8; animation:blink 1.5s infinite; }
   </style>
 </head>
 <body>
@@ -367,6 +399,7 @@
         <div class="card-h">📷 Aperçu — ce que le receiver voit</div>
         <div class="vwrap">
           <video id="lv-i" autoplay playsinline muted></video>
+          <video id="rcam-inset-i" class="vcall-inset" autoplay playsinline title="Caméra receiver"></video>
           <div class="vph" id="lph-i"><div class="vph-ic">📷</div><p>Aperçu caméra</p></div>
         </div>
       </div>
@@ -530,9 +563,23 @@
               <a class="app-chip" href="https://play.google.com/store/apps/details?id=com.koushikdutta.vysor" target="_blank">📱 Vysor</a>
             </div>
           </div>
+          <!-- Firefox Android option -->
+          <div class="hbox" style="margin-top:12px">
+            <h4>🦊 Option Firefox pour Android — Essayez le partage d'écran</h4>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
+              Contrairement à Chrome, <strong>Firefox pour Android</strong> permet encore <code>getDisplayMedia</code> sur certaines versions.
+              Ouvrez ce site dans Firefox Android et utilisez le bouton <strong>Partager mon écran</strong> depuis l'onglet Émetteur.
+            </p>
+            <div class="app-row">
+              <a class="app-chip" href="https://play.google.com/store/apps/details?id=org.mozilla.firefox" target="_blank">🦊 Télécharger Firefox Android</a>
+            </div>
+            <p style="font-size:11px;color:var(--muted);margin-top:8px">
+              ⚠️ Non garanti sur toutes les versions — si ça ne marche pas, utilisez une app dédiée ci-dessus.
+            </p>
+          </div>
           <div class="ib ib-y" style="margin-top:12px;margin-bottom:0">
-            <strong>Pourquoi le navigateur ne peut pas capturer l'écran Android ?</strong>
-            Google a délibérément désactivé <code>getDisplayMedia</code> dans Chrome Android depuis Chrome 88. Ce n'est pas un bug — c'est une décision de sécurité. Seules les apps natives peuvent accéder à la capture d'écran via l'API <code>MediaProjection</code> d'Android.
+            <strong>Pourquoi Chrome Android ne peut pas capturer l'écran ?</strong>
+            Google a délibérément désactivé <code>getDisplayMedia</code> dans Chrome Android depuis Chrome 88. Ce n'est pas un bug — c'est une décision de sécurité. Seules les apps natives peuvent accéder à la capture d'écran via l'API <code>MediaProjection</code> d'Android. WhatsApp, Zoom, Meet utilisent leurs propres apps natives — impossible à reproduire depuis un site web sur Chrome.
           </div>
         </div>
 
@@ -551,6 +598,7 @@
         <div class="card-h">📷 Aperçu caméra</div>
         <div class="vwrap">
           <video id="lv-a" autoplay playsinline muted></video>
+          <video id="rcam-inset-a" class="vcall-inset" autoplay playsinline title="Caméra receiver"></video>
           <div class="vph" id="lph-a"><div class="vph-ic">📷</div><p>Aperçu caméra</p></div>
         </div>
         <div class="vctrls">
@@ -579,6 +627,7 @@
         <div class="card-h">🖥️ Aperçu local</div>
         <div class="vwrap">
           <video id="lv-d" autoplay playsinline muted></video>
+          <video id="rcam-inset-d" class="vcall-inset" autoplay playsinline title="Caméra receiver"></video>
           <div class="vph" id="lph-d"><div class="vph-ic">📷</div><p>Aperçu ici</p></div>
         </div>
         <div class="vctrls">
@@ -636,17 +685,48 @@
 
     <div class="card">
       <div class="card-h">📺 Flux reçu</div>
-      <div class="vwrap">
+      <div class="vwrap" id="rv-wrap">
         <video id="rv" autoplay playsinline></video>
+        <!-- Inset : aperçu de sa propre caméra (self-view) -->
+        <video id="self-cam-inset" class="vcall-inset" autoplay playsinline muted title="Votre caméra"></video>
         <div class="vph" id="rph">
           <div class="vph-ic">📡</div>
           <p>L'écran partagé apparaîtra ici<br>une fois connecté.</p>
         </div>
       </div>
-      <div class="vctrls">
+      <!-- Contrôles appel vidéo bidirectionnel -->
+      <div id="rcv-call-ctrl">
+        <div class="vcall-badge">Appel en cours</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">
+          Activez votre caméra pour que l'émetteur vous voie aussi (style WhatsApp).
+        </div>
+        <div class="cam-ctrl-row">
+          <div class="ctrl-btn" id="rv-mic-btn" onclick="toggleRecvMic()">
+            <div class="ctrl-ic" id="rv-mic-ic">🎙️</div>
+            <div class="ctrl-lbl" id="rv-mic-lbl">Micro</div>
+          </div>
+          <div class="ctrl-btn" id="rv-cam-btn" onclick="toggleRecvCam()">
+            <div class="ctrl-ic" id="rv-cam-ic">📷</div>
+            <div class="ctrl-lbl" id="rv-cam-lbl">Ma caméra</div>
+          </div>
+          <div class="ctrl-btn" onclick="flipV('rv')">
+            <div class="ctrl-ic">🪞</div>
+            <div class="ctrl-lbl">Miroir</div>
+          </div>
+          <div class="ctrl-btn" onclick="openFS('rv')">
+            <div class="ctrl-ic">⛶</div>
+            <div class="ctrl-lbl">Plein écran</div>
+          </div>
+          <div class="ctrl-btn" id="pip-btn" style="display:none" onclick="doPiP()">
+            <div class="ctrl-ic">📺</div>
+            <div class="ctrl-lbl">PiP</div>
+          </div>
+        </div>
+      </div>
+      <!-- Ancien band de boutons — caché quand rcv-call-ctrl visible -->
+      <div class="vctrls" id="rv-vctrls-basic">
         <button class="btn btn-o" onclick="flipV('rv')">🔄 Miroir</button>
         <button class="btn btn-o" onclick="openFS('rv')">⛶ Plein écran</button>
-        <button class="btn btn-o" id="pip-btn" style="display:none" onclick="doPiP()">📺 PiP</button>
       </div>
     </div>
 
@@ -709,8 +789,12 @@ var isIOS     = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
 var isAndroid = /Android/.test(navigator.userAgent);
 var pjsReady  = false;
 var activeSuffix = 'd'; // 'd'esktop | 'a'ndroid | 'i'os
-var micMuted   = false;
-var camFacing  = 'environment'; // current camera facing mode
+var micMuted      = false;
+var camFacing     = 'environment';
+var recvCamStream = null;   // receiver's own camera stream
+var recvCamActive = false;  // is receiver cam on?
+var recvMicMuted  = false;  // is receiver mic muted?
+var senderPeerId  = null;   // sender's peer ID (used by receiver to call back)
 
 /* ================================================================
    PEERJS LOAD — double CDN
@@ -993,6 +1077,7 @@ function doJoin(){
 
   peer.on('open',function(){
     var sid='smirror3-'+sanitize(code);
+    senderPeerId=sid;
     var dc=peer.connect(sid,{reliable:true,serialization:'json'});
 
     dc.on('open',function(){
@@ -1004,16 +1089,19 @@ function doJoin(){
   });
 
   peer.on('call',function(call){
-    call.answer();
+    /* Répondre avec la cam receiver si active, sinon sans stream */
+    call.answer(recvCamStream||undefined);
     call.on('stream',function(rs){
       sp('j-sp',false);
       document.getElementById('rv').srcObject=rs;
       document.getElementById('rph').style.display='none';
-      setSt('s-recv','s-ok','✓ Flux reçu — streaming en cours.');
+      setSt('s-recv','s-ok','✓ Flux reçu — appel en cours.');
       setBadge('Connecté',true);
       document.getElementById('recv-start-row').style.display='none';
       document.getElementById('recv-stop-row').style.display='flex';
-      if(document.pictureInPictureEnabled) document.getElementById('pip-btn').style.display='inline-flex';
+      document.getElementById('rcv-call-ctrl').style.display='block';
+      document.getElementById('rv-vctrls-basic').style.display='none';
+      if(document.pictureInPictureEnabled) document.getElementById('pip-btn').style.display='flex';
     });
     call.on('close',function(){ clearRemote(); setSt('s-recv','s-warn','⚠ Flux interrompu.'); });
     call.on('error',function(e){ clearRemote(); setSt('s-recv','s-err','✗ '+e); });
@@ -1030,17 +1118,134 @@ function doJoin(){
     }
   });
 
+  /* ── Receiver appelle le sender avec sa caméra ── */
+  peer.on('call',function(incomingCall){
+    incomingCall.answer();   /* Pas de stream retour depuis sender */
+    incomingCall.on('stream',function(rs){
+      showRcamInset(rs, sfx);
+    });
+    incomingCall.on('close',function(){ hideRcamInset(sfx); });
+  });
+
   peer.on('disconnected',function(){
     setTimeout(function(){if(peer)peer.reconnect();},2000);
   });
 }
 
+function showRcamInset(stream, sfx){
+  var insetId='rcam-inset-'+(sfx||activeSuffix);
+  var el=document.getElementById(insetId);
+  if(el){ el.srcObject=stream; el.style.display='block'; makeDraggable(el); }
+}
+function hideRcamInset(sfx){
+  var insetId='rcam-inset-'+(sfx||activeSuffix);
+  var el=document.getElementById(insetId);
+  if(el){ el.srcObject=null; el.style.display='none'; }
+}
+function clearAllInsets(){
+  ['d','a','i'].forEach(function(s){
+    var el=document.getElementById('rcam-inset-'+s);
+    if(el){ el.srcObject=null; el.style.display='none'; }
+  });
+}
+
+/* drag-to-move pour les vidéos inset */
+function makeDraggable(el){
+  if(el._drag) return; el._drag=true;
+  var ox=0,oy=0,sx=0,sy=0;
+  el.addEventListener('mousedown',startDrag);
+  el.addEventListener('touchstart',startDragT,{passive:true});
+  function startDrag(e){ e.preventDefault(); ox=el.offsetLeft; oy=el.offsetTop; sx=e.clientX; sy=e.clientY;
+    document.addEventListener('mousemove',onDrag); document.addEventListener('mouseup',stopDrag); }
+  function startDragT(e){ var t=e.touches[0]; ox=el.offsetLeft; oy=el.offsetTop; sx=t.clientX; sy=t.clientY;
+    document.addEventListener('touchmove',onDragT,{passive:true}); document.addEventListener('touchend',stopDrag); }
+  function onDrag(e){ move(e.clientX,e.clientY); }
+  function onDragT(e){ var t=e.touches[0]; move(t.clientX,t.clientY); }
+  function move(cx,cy){
+    var parent=el.parentElement; var pr=parent.getBoundingClientRect();
+    var nx=ox+(cx-sx); var ny=oy+(cy-sy);
+    nx=Math.max(0,Math.min(nx,pr.width-el.offsetWidth));
+    ny=Math.max(0,Math.min(ny,pr.height-el.offsetHeight));
+    el.style.right=''; el.style.bottom=''; el.style.left=nx+'px'; el.style.top=ny+'px';
+  }
+  function stopDrag(){ document.removeEventListener('mousemove',onDrag); document.removeEventListener('mouseup',stopDrag);
+    document.removeEventListener('touchmove',onDragT); document.removeEventListener('touchend',stopDrag); }
+}
+
+/* ================================================================
+   RECEIVER BIDIRECTIONAL CAM — mic / cam toggle
+================================================================ */
+function toggleRecvMic(){
+  if(!recvCamStream) return;
+  recvMicMuted=!recvMicMuted;
+  recvCamStream.getAudioTracks().forEach(function(t){ t.enabled=!recvMicMuted; });
+  var ic=document.getElementById('rv-mic-ic');
+  var lb=document.getElementById('rv-mic-lbl');
+  var btn=document.getElementById('rv-mic-btn');
+  if(ic) ic.textContent = recvMicMuted ? '🔇' : '🎙️';
+  if(lb) lb.textContent = recvMicMuted ? 'Mic coupé' : 'Micro';
+  if(btn) btn.style.opacity = recvMicMuted ? '0.5' : '1';
+}
+
+function toggleRecvCam(){
+  if(recvCamActive){ stopRecvCam(); }
+  else { startRecvCam(); }
+}
+
+function startRecvCam(){
+  if(!peer || !senderPeerId){
+    setSt('s-recv','s-warn','⚠ Connectez-vous d\'abord à une session.'); return;
+  }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true})
+  .then(function(stream){
+    recvCamStream=stream;
+    recvCamActive=true;
+    recvMicMuted=false;
+    /* Aperçu de soi dans l'inset */
+    var sc=document.getElementById('self-cam-inset');
+    if(sc){ sc.srcObject=stream; sc.style.display='block'; makeDraggable(sc); }
+    /* Appeler le sender avec le stream camera */
+    var call=peer.call(senderPeerId, stream);
+    if(call){
+      call.on('stream',function(){});  /* sender ne stream pas de retour ici */
+    }
+    /* UI */
+    var ic=document.getElementById('rv-cam-ic');
+    var lb=document.getElementById('rv-cam-lbl');
+    var btn=document.getElementById('rv-cam-btn');
+    if(ic) ic.textContent='🟢';
+    if(lb) lb.textContent='Cam active';
+    if(btn){ btn.style.borderColor='var(--success)'; btn.style.background='rgba(34,211,168,.1)'; }
+    setSt('s-recv','s-ok','✓ Votre caméra est envoyée à l\'émetteur.');
+  })
+  .catch(function(e){
+    setSt('s-recv','s-err','✗ Caméra refusée : '+e.message);
+  });
+}
+
+function stopRecvCam(){
+  if(recvCamStream){ recvCamStream.getTracks().forEach(function(t){t.stop();}); recvCamStream=null; }
+  recvCamActive=false;
+  var sc=document.getElementById('self-cam-inset');
+  if(sc){ sc.srcObject=null; sc.style.display='none'; }
+  var ic=document.getElementById('rv-cam-ic');
+  var lb=document.getElementById('rv-cam-lbl');
+  var btn=document.getElementById('rv-cam-btn');
+  if(ic) ic.textContent='📷';
+  if(lb) lb.textContent='Ma caméra';
+  if(btn){ btn.style.borderColor=''; btn.style.background=''; btn.style.opacity='1'; }
+}
+
 function clearRemote(){
+  stopRecvCam();
+  senderPeerId=null;
   document.getElementById('rv').srcObject=null;
   document.getElementById('rph').style.display='flex';
   document.getElementById('pip-btn').style.display='none';
   document.getElementById('recv-start-row').style.display='flex';
   document.getElementById('recv-stop-row').style.display='none';
+  document.getElementById('rcv-call-ctrl').style.display='none';
+  document.getElementById('rv-vctrls-basic').style.display='flex';
 }
 
 function doLeave(){
@@ -1069,6 +1274,9 @@ function doStop(){
   var isRow=document.getElementById('ios-start-row'); if(isRow)isRow.style.display='flex';
   var osRow=document.getElementById('ios-stop-row');  if(osRow)osRow.style.display='none';
   var cc=document.getElementById('ios-cam-controls');  if(cc)cc.style.display='none';
+
+  /* Cacher les insets receiver cam */
+  clearAllInsets();
 
   var gbd=document.getElementById('go-btn-d'); if(gbd)gbd.style.display='inline-flex';
   setSt('s-send','s-idle','En attente…');
