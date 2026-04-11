@@ -1,1393 +1,988 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Screen Mirror Online</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0d0d1f; --surface: #181830; --surface2: #21213d;
-      --border: #2a2a4a; --primary: #5b5ef4; --primary-d: #3b3ec4;
-      --accent: #00d4ff; --success: #22d3a8; --warn: #f59e0b;
-      --danger: #f35; --text: #eef; --muted: #7880a0; --r: 12px;
-    }
-    html,body { height:100%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisioConnect - Appel Vidéo HD</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    header {
-      background:var(--surface); border-bottom:1px solid var(--border);
-      padding:14px 18px; display:flex; align-items:center; gap:12px;
-      position:sticky; top:0; z-index:50;
-    }
-    .logo { width:38px;height:38px; background:linear-gradient(135deg,var(--primary),var(--accent));
-      border-radius:10px; display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
-    .logo-txt h1 { font-size:16px; font-weight:700; }
-    .logo-txt p  { font-size:11px; color:var(--muted); }
-    #hdr-badge {
-      margin-left:auto; font-size:11px; font-weight:600; padding:4px 10px;
-      border-radius:20px; background:rgba(148,163,184,.12); border:1px solid var(--border); color:var(--muted);
-      display:flex;align-items:center;gap:5px;
-    }
-    #hdr-badge.on { background:rgba(34,211,168,.12); border-color:rgba(34,211,168,.3); color:var(--success); }
-    #hdr-badge.on::before { content:''; width:6px;height:6px;border-radius:50%;background:var(--success);animation:blink 1.5s infinite; }
-    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
 
-    main { max-width:900px; margin:0 auto; padding:20px 14px 80px; }
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
 
-    .tabs { display:flex; background:var(--surface); border:1px solid var(--border);
-      border-radius:var(--r); padding:4px; gap:4px; margin-bottom:20px; }
-    .tab { flex:1;padding:10px;border:none;border-radius:9px;background:transparent;
-      color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s; }
-    .tab.on { background:linear-gradient(135deg,var(--primary),var(--primary-d)); color:#fff;
-      box-shadow:0 4px 14px rgba(91,94,244,.35); }
+        /* Écran d'accueil */
+        .home-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            gap: 2rem;
+            padding: 2rem;
+        }
 
-    .card { background:var(--surface); border:1px solid var(--border);
-      border-radius:var(--r); padding:20px; margin-bottom:16px; }
-    .card-h { font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
-    .badge { font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px; }
-    .b-warn { background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.3); }
-    .b-ok   { background:rgba(34,211,168,.12);color:var(--success);border:1px solid rgba(34,211,168,.3); }
-    .b-info { background:rgba(0,212,255,.12);color:var(--accent);border:1px solid rgba(0,212,255,.3); }
-    .b-err  { background:rgba(255,51,85,.12);color:var(--danger);border:1px solid rgba(255,51,85,.3); }
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
 
-    .panel { display:none; }
-    .panel.on { display:block; animation:fi .25s ease; }
-    @keyframes fi { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 1.2rem;
+            text-align: center;
+            max-width: 600px;
+        }
 
-    /* METHOD TABS (Android options) */
-    .mtabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
-    .mtab { padding:8px 14px; border:1px solid var(--border); border-radius:8px;
-      background:var(--surface2); color:var(--muted); font-size:12px; font-weight:600;
-      cursor:pointer; transition:all .18s; }
-    .mtab.on { border-color:var(--primary); background:rgba(91,94,244,.12); color:var(--primary); }
+        .action-buttons {
+            display: flex;
+            gap: 3rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
 
-    .method-panel { display:none; }
-    .method-panel.on { display:block; }
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
 
-    .mode-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px; }
-    @media(max-width:460px){.mode-grid{grid-template-columns:1fr;}}
-    .mcard { background:var(--surface2);border:2px solid var(--border);border-radius:var(--r);
-      padding:16px;cursor:pointer;text-align:center;transition:all .18s; }
-    .mcard:hover,.mcard.sel { border-color:var(--primary); background:rgba(91,94,244,.1); }
-    .mcard .ic { font-size:28px;margin-bottom:7px; }
-    .mcard h3 { font-size:13px;font-weight:700;margin-bottom:3px; }
-    .mcard p  { font-size:11px;color:var(--muted);line-height:1.4; }
+        .action-btn:hover {
+            transform: scale(1.05);
+        }
 
-    .row { display:flex;gap:8px;margin-bottom:12px; }
-    input[type=text] { flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
-      padding:10px 13px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s; }
-    input[type=text]:focus { border-color:var(--primary); }
-    input[type=text]::placeholder { color:var(--muted); }
+        .btn-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            border: 4px solid rgba(255,255,255,0.1);
+        }
 
-    .btn { display:inline-flex;align-items:center;gap:7px;padding:10px 18px;
-      border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;
-      transition:all .18s;white-space:nowrap; }
-    .btn:disabled { opacity:.4;cursor:not-allowed;pointer-events:none; }
-    .btn-p { background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;
-      box-shadow:0 3px 10px rgba(91,94,244,.3); }
-    .btn-p:hover { transform:translateY(-1px); }
-    .btn-g { background:linear-gradient(135deg,var(--success),#059669);color:#fff; }
-    .btn-g:hover { transform:translateY(-1px); }
-    .btn-r { background:linear-gradient(135deg,var(--danger),#c00);color:#fff; }
-    .btn-o { background:transparent;border:1px solid var(--border);color:var(--text); }
-    .btn-o:hover { border-color:var(--primary);color:var(--primary); }
-    .btn-a { background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff; }
-    .spin { width:15px;height:15px;border:2px solid rgba(255,255,255,.3);
-      border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;display:none; }
-    @keyframes sp { to{transform:rotate(360deg)} }
+        .btn-decline {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
 
-    .status { display:flex;align-items:center;gap:9px;padding:11px 14px;border-radius:9px;
-      font-size:13px;font-weight:500;margin-top:10px; }
-    .s-idle { background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.15);color:var(--muted); }
-    .s-info { background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);color:var(--accent); }
-    .s-ok   { background:rgba(34,211,168,.08);border:1px solid rgba(34,211,168,.25);color:var(--success); }
-    .s-err  { background:rgba(255,51,85,.08);border:1px solid rgba(255,51,85,.25);color:var(--danger); }
-    .s-warn { background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:var(--warn); }
+        .btn-answer {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+        }
 
-    .vwrap { position:relative;background:#000;border-radius:var(--r);overflow:hidden;
-      aspect-ratio:16/9;border:1px solid var(--border); }
-    .vwrap video { width:100%;height:100%;object-fit:contain;display:block; }
-    .vph { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-      justify-content:center;gap:10px;color:var(--muted);font-size:12px;text-align:center;padding:16px; }
-    .vph-ic { font-size:44px; }
-    .vctrls { display:flex;gap:8px;margin-top:10px;flex-wrap:wrap; }
+        .btn-circle:hover {
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            transform: translateY(-5px);
+        }
 
-    .cpr { display:flex;align-items:center;gap:8px;background:var(--surface2);
-      border:1px solid var(--border);border-radius:9px;padding:8px 12px;margin-top:8px; }
-    .cpr span { flex:1;font-size:11px;color:var(--muted);word-break:break-all; }
-    .cpbtn { background:var(--primary);color:#fff;border:none;border-radius:6px;
-      padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap; }
+        .btn-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+        }
 
-    .qrbox { display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px;
-      background:var(--surface2);border-radius:var(--r);border:1px solid var(--border); }
-    .qrbox canvas,.qrbox img { border-radius:8px; }
-    .qr-url { font-size:11px;color:var(--muted);word-break:break-all;text-align:center;max-width:240px; }
+        /* Modal pour code/QR */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
 
-    .steps { display:flex;flex-direction:column;gap:14px; }
-    .step { display:flex;gap:12px;align-items:flex-start; }
-    .snum { width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));
-      color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px; }
-    .snum-y { background:linear-gradient(135deg,var(--warn),#d97706) !important; }
-    .sc h4 { font-size:13px;font-weight:600;margin-bottom:3px; }
-    .sc p  { font-size:12px;color:var(--muted);line-height:1.6; }
+        .modal.active {
+            display: flex;
+        }
 
-    .ib { padding:12px 15px;border-radius:9px;font-size:12px;line-height:1.6;margin-bottom:14px; }
-    .ib-y { background:rgba(245,158,11,.08);border-left:3px solid var(--warn);color:#fde68a; }
-    .ib-b { background:rgba(0,212,255,.07);border-left:3px solid var(--accent);color:#a5f3ff; }
-    .ib-g { background:rgba(34,211,168,.07);border-left:3px solid var(--success);color:#a7f3d0; }
-    .ib-r { background:rgba(255,51,85,.07);border-left:3px solid var(--danger);color:#fca5a5; }
-    .ib strong { display:block;margin-bottom:3px;font-weight:700; }
+        .modal-content {
+            background: linear-gradient(135deg, #2d3436, #000000);
+            padding: 2rem;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
 
-    /* HIGHLIGHT BOX */
-    .hbox { background:var(--surface2);border:1px solid var(--border);border-radius:10px;
-      padding:14px;margin:10px 0; }
-    .hbox h4 { font-size:13px;font-weight:700;margin-bottom:6px; }
-    .hbox ol,.hbox ul { padding-left:18px; }
-    .hbox li { font-size:12px;color:var(--muted);line-height:1.8; }
-    .hbox li strong { color:var(--text); }
-    .app-row { display:flex;gap:8px;flex-wrap:wrap;margin-top:10px; }
-    .app-chip { background:var(--surface);border:1px solid var(--border);border-radius:8px;
-      padding:6px 12px;font-size:11px;font-weight:600;color:var(--text);text-decoration:none;
-      display:inline-flex;align-items:center;gap:5px; }
+        .modal-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #00d4ff;
+        }
 
-    .plist { display:flex;flex-direction:column;gap:8px; }
-    .pitem { display:flex;align-items:center;gap:10px;padding:10px 13px;
-      background:var(--surface2);border:1px solid var(--border);border-radius:9px; }
-    .pdot { width:8px;height:8px;border-radius:50%;background:var(--success);animation:blink 1.5s infinite;flex-shrink:0; }
-    .pname { flex:1;font-size:13px;font-weight:500; }
-    .pack { font-size:12px;color:var(--primary);cursor:pointer; }
+        .code-display {
+            background: rgba(0,0,0,0.5);
+            padding: 1rem;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 2rem;
+            letter-spacing: 0.5rem;
+            margin: 1rem 0;
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
+        }
 
-    #fso { display:none;position:fixed;inset:0;background:#000;z-index:9999;
-      justify-content:center;align-items:center; }
-    #fso video { width:100%;height:100%;object-fit:contain; }
-    #fso-exit { position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);
-      border:none;border-radius:8px;color:#fff;padding:7px 13px;font-size:13px;cursor:pointer; }
+        #qrcode {
+            margin: 1rem auto;
+            padding: 1rem;
+            background: white;
+            border-radius: 10px;
+            display: inline-block;
+        }
 
-    footer { text-align:center;padding:28px 16px;color:var(--muted);font-size:11px;
-      border-top:1px solid var(--border);margin-top:30px;line-height:1.7; }
+        .input-group {
+            margin: 1rem 0;
+        }
 
-    /* ── PHONE CALL BUTTONS ── */
-    .call-btn {
-      width:64px; height:64px; border-radius:50%; border:none;
-      display:inline-flex; align-items:center; justify-content:center;
-      cursor:pointer; transition:transform .15s, box-shadow .15s;
-      flex-shrink:0;
-    }
-    .call-btn:hover { transform:scale(1.08); }
-    .call-btn:active { transform:scale(0.95); }
-    .call-btn svg { width:28px; height:28px; }
+        .input-group input {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.2rem;
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            text-align: center;
+            letter-spacing: 0.3rem;
+        }
 
-    .call-btn-green {
-      background:linear-gradient(135deg,#22d3a8,#059669);
-      box-shadow:0 6px 20px rgba(34,211,168,.45);
-    }
-    .call-btn-green:hover { box-shadow:0 8px 26px rgba(34,211,168,.6); }
+        .scan-btn, .close-modal {
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+            transition: transform 0.2s;
+        }
 
-    .call-btn-red {
-      background:linear-gradient(135deg,#f35,#c00);
-      box-shadow:0 6px 20px rgba(255,51,85,.45);
-    }
-    .call-btn-red:hover { box-shadow:0 8px 26px rgba(255,51,85,.6); }
+        .scan-btn:hover, .close-modal:hover {
+            transform: scale(1.05);
+        }
 
-    /* Row for phone buttons centered */
-    .call-row {
-      display:flex; align-items:center; justify-content:center; gap:20px;
-      padding:16px 0 4px;
-    }
-    .call-label {
-      font-size:11px; color:var(--muted); font-weight:600;
-      text-align:center; margin-top:5px;
-    }
-    .call-item { display:flex; flex-direction:column; align-items:center; }
+        #video-scan {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: none;
+        }
 
-    /* Receiver join area */
-    .join-area { text-align:center; padding:10px 0; }
-    .join-area .call-label { font-size:13px; color:var(--text); font-weight:700; margin-bottom:12px; }
+        /* Interface d'appel */
+        .call-interface {
+            display: none;
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: #000;
+        }
 
-    /* iOS CAMERA CONTROLS — appear after stream starts */
-    #ios-cam-controls {
-      display:none;
-      background:var(--surface2);
-      border:1px solid var(--border);
-      border-radius:12px;
-      padding:14px 16px;
-      margin-top:14px;
-    }
-    .cam-ctrl-row {
-      display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;
-    }
-    .ctrl-btn {
-      display:flex; flex-direction:column; align-items:center; gap:5px;
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:12px; padding:12px 16px; cursor:pointer;
-      transition:all .18s; min-width:70px;
-    }
-    .ctrl-btn:hover { border-color:var(--primary); background:rgba(91,94,244,.1); }
-    .ctrl-btn.active { border-color:var(--danger); background:rgba(255,51,85,.1); }
-    .ctrl-btn .ctrl-ic { font-size:22px; }
-    .ctrl-btn .ctrl-lbl { font-size:10px; font-weight:600; color:var(--muted); }
-    .ctrl-btn.active .ctrl-lbl { color:var(--danger); }
+        .call-interface.active {
+            display: block;
+        }
 
-    /* ── BIDIRECTIONAL VIDEO CALL — inset overlay ── */
-    .vcall-inset {
-      position:absolute; bottom:10px; right:10px;
-      width:88px; height:118px;
-      border-radius:11px; border:2px solid rgba(255,255,255,.45);
-      object-fit:cover; z-index:10; background:#111;
-      box-shadow:0 4px 16px rgba(0,0,0,.6);
-      cursor:grab;
-      display:none;
-    }
-    .vcall-inset-label {
-      position:absolute; bottom:10px; right:10px;
-      background:rgba(0,0,0,.55); color:#fff;
-      font-size:9px; font-weight:700; padding:2px 6px;
-      border-radius:0 0 9px 0; z-index:11; pointer-events:none;
-      display:none;
-    }
-    /* Receiver call controls bar */
-    #rcv-call-ctrl {
-      display:none; margin-top:12px;
-      background:var(--surface2); border:1px solid var(--border);
-      border-radius:12px; padding:14px 16px;
-    }
-    .vcall-badge {
-      display:inline-flex; align-items:center; gap:6px;
-      background:rgba(34,211,168,.15); border:1px solid rgba(34,211,168,.3);
-      color:#22d3a8; font-size:11px; font-weight:700;
-      border-radius:20px; padding:4px 10px; margin-bottom:10px;
-    }
-    .vcall-badge::before { content:''; width:7px; height:7px; border-radius:50%;
-      background:#22d3a8; animation:blink 1.5s infinite; }
-  </style>
+        .remote-video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #remoteVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .local-video-container {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            width: 280px;
+            height: 210px;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px solid rgba(255,255,255,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .local-video-container.mirror {
+            transform: scaleX(-1);
+        }
+
+        .local-video-container.pip {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            cursor: move;
+        }
+
+        #localVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Contrôles */
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 20;
+            background: rgba(0,0,0,0.6);
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            position: relative;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .control-btn.active {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .control-btn.danger {
+            background: #ff416c;
+        }
+
+        .control-btn.danger:hover {
+            background: #ff2e63;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .control-btn:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* Status */
+        .status-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            background: rgba(0,0,0,0.5);
+            padding: 1rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00d4ff;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: #00d4ff;
+        }
+
+        /* Plein écran */
+        .fullscreen-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 30;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            z-index: 2000;
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .notification.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .local-video-container {
+                width: 150px;
+                height: 112px;
+                bottom: 120px;
+                right: 10px;
+            }
+            
+            .controls {
+                padding: 0.8rem 1rem;
+                gap: 0.5rem;
+            }
+            
+            .control-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+            
+            .btn-circle {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5rem;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .dragging {
+            opacity: 0.8;
+            cursor: grabbing !important;
+        }
+    </style>
 </head>
 <body>
-
-<div id="fso">
-  <video id="fsv" autoplay playsinline muted></video>
-  <button id="fso-exit" onclick="exitFS()">✕ Quitter</button>
-</div>
-
-<header>
-  <div class="logo">📲</div>
-  <div class="logo-txt">
-    <h1>Screen Mirror Online</h1>
-    <p>Miroir d'écran sans installation</p>
-  </div>
-  <div id="hdr-badge">Prêt</div>
-</header>
-
-<main>
-  <div class="tabs">
-    <button class="tab on" id="t-send" onclick="goTab('send')">🖥️ Partager mon écran</button>
-    <button class="tab" id="t-recv" onclick="goTab('recv')">📺 Voir un écran</button>
-  </div>
-
-  <!-- ══════════ SENDER ══════════ -->
-  <div class="panel on" id="p-send">
-
-    <!-- Bannière plateforme auto-remplie -->
-    <div id="plat-info" class="ib ib-b" style="display:none"></div>
-
-    <!-- ── PC / Desktop ── -->
-    <div id="block-desktop" style="display:none">
-      <div class="card">
-        <div class="card-h">🖥️ Mode de partage</div>
-        <div class="mode-grid">
-          <div class="mcard sel" id="m-webrtc" onclick="setMode('webrtc')">
-            <div class="ic">🌐</div><h3>WebRTC — Autre appareil</h3>
-            <p>Envoyez le flux sur un autre téléphone ou PC via un code</p>
-          </div>
-          <div class="mcard" id="m-local" onclick="setMode('local')">
-            <div class="ic">🔄</div><h3>Local — Cet écran</h3>
-            <p>Aperçu immédiat sur cet écran uniquement</p>
-          </div>
-        </div>
-      </div>
-      <div class="card" id="sess-card-desktop">
-        <div class="card-h">🔑 Code de session <span class="badge b-ok">Partagez-le</span></div>
-        <div class="row">
-          <input type="text" id="room-d" placeholder="Ex : abc-xyz-123" maxlength="30" />
-          <button class="btn btn-o" onclick="makeCode('d')">🎲</button>
-        </div>
-        <div id="shr-row-d" class="cpr" style="display:none">
-          <span id="shr-url-d"></span><button class="cpbtn" onclick="cpURL('d')">Copier</button>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-          <button class="btn btn-p" id="go-btn-d" onclick="doStartDesktop()">
-            <span class="spin" id="sp-d"></span>📡 Démarrer
-          </button>
-          <button class="btn btn-r" id="stop-btn-d" style="display:none" onclick="doStop()">⏹ Arrêter</button>
-        </div>
-        <div class="status s-idle" id="s-send">En attente…</div>
-      </div>
-    </div>
-
-    <!-- ── iOS ── -->
-    <div id="block-ios" style="display:none">
-      <div class="card">
-        <div class="card-h">🍎 Partage caméra iOS <span class="badge b-ok">Fonctionne ✓</span></div>
-        <div class="ib ib-y" style="margin-bottom:12px">
-          <strong>ℹ️ Rappel</strong>
-          La capture d'écran est bloquée par Apple. La caméra (avant ou arrière) fonctionne parfaitement via ce site.
+    <div class="container">
+        <!-- Écran d'accueil -->
+        <div class="home-screen" id="homeScreen">
+            <div class="logo">📹 VisioConnect</div>
+            <div class="subtitle">Communiquez en visioconférence HD avec partage sécurisé par code ou QR code</div>
+            
+            <div class="action-buttons">
+                <div class="action-btn" onclick="showCreateModal()">
+                    <div class="btn-circle btn-decline">
+                        📞
+                    </div>
+                    <span class="btn-label">Créer un appel</span>
+                </div>
+                
+                <div class="action-btn" onclick="showJoinModal()">
+                    <div class="btn-circle btn-answer">
+                        📲
+                    </div>
+                    <span class="btn-label">Rejoindre un appel</span>
+                </div>
+            </div>
         </div>
 
-        <!-- Code de session -->
-        <div class="row" style="margin-bottom:8px">
-          <input type="text" id="room-i" placeholder="Code de session…" maxlength="30"/>
-          <button class="btn btn-o" onclick="makeCode('i')">🎲</button>
-        </div>
-        <div id="shr-row-i" class="cpr" style="display:none">
-          <span id="shr-url-i"></span><button class="cpbtn" onclick="cpURL('i')">Copier</button>
+        <!-- Modal Créer -->
+        <div class="modal" id="createModal">
+            <div class="modal-content">
+                <h2 class="modal-title">📞 Créer une session</h2>
+                <p>Votre code de session :</p>
+                <div class="code-display" id="sessionCode">----</div>
+                <div id="qrcode"></div>
+                <p style="margin-top: 1rem; color: #888; font-size: 0.9rem;">
+                    Partagez ce code ou le QR code avec votre correspondant
+                </p>
+                <button class="close-modal" onclick="startCall()">🚀 Démarrer l'appel</button>
+                <button class="close-modal" onclick="closeModal('createModal')" style="background: #666;">Annuler</button>
+            </div>
         </div>
 
-        <!-- Bouton DÉMARRER (téléphone vert) -->
-        <div class="call-row" id="ios-start-row">
-          <div class="call-item">
-            <button class="call-btn call-btn-green" onclick="doCamera('i')" id="ios-call-start">
-              <!-- Icône téléphone décroché (répondre) -->
-              <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
-              </svg>
+        <!-- Modal Rejoindre -->
+        <div class="modal" id="joinModal">
+            <div class="modal-content">
+                <h2 class="modal-title">📲 Rejoindre une session</h2>
+                <div class="input-group">
+                    <input type="text" id="joinCode" placeholder="Entrez le code à 4 chiffres" maxlength="4">
+                </div>
+                <button class="scan-btn" onclick="startScan()">📷 Scanner un QR code</button>
+                <video id="video-scan" playsinline></video>
+                <canvas id="canvas-scan" style="display:none;"></canvas>
+                <br>
+                <button class="close-modal" onclick="joinCall()">✅ Rejoindre</button>
+                <button class="close-modal" onclick="closeModal('joinModal')" style="background: #666;">Annuler</button>
+            </div>
+        </div>
+
+        <!-- Interface d'appel -->
+        <div class="call-interface" id="callInterface">
+            <button class="fullscreen-btn" onclick="toggleFullscreen()" title="Plein écran">
+                ⛶
             </button>
-            <div class="call-label">Démarrer</div>
-          </div>
-        </div>
 
-        <!-- Bouton RACCROCHER (téléphone rouge) — visible seulement pendant le partage -->
-        <div class="call-row" id="ios-stop-row" style="display:none">
-          <div class="call-item">
-            <button class="call-btn call-btn-red" onclick="doStop()" id="ios-call-stop">
-              <!-- Icône téléphone raccroché (terminer) -->
-              <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style="transform:rotate(135deg)">
-                <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
-              </svg>
-            </button>
-            <div class="call-label">Raccrocher</div>
-          </div>
-        </div>
-
-        <div class="status s-idle" id="s-send-i">En attente…</div>
-
-        <!-- CONTRÔLES CAMÉRA — apparaissent après démarrage -->
-        <div id="ios-cam-controls" style="display:none">
-          <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;text-align:center;letter-spacing:.5px;text-transform:uppercase;">Contrôles en direct</div>
-          <div class="cam-ctrl-row">
-            <div class="ctrl-btn" id="ctrl-mic" onclick="toggleMic()">
-              <div class="ctrl-ic" id="mic-ic">🎙️</div>
-              <div class="ctrl-lbl" id="mic-lbl">Micro actif</div>
+            <div class="status-bar">
+                <div class="connection-status">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Connexion en cours...</span>
+                </div>
+                <div class="timer" id="timer">00:00</div>
             </div>
-            <div class="ctrl-btn" id="ctrl-flip" onclick="flipCamera()">
-              <div class="ctrl-ic">🔁</div>
-              <div class="ctrl-lbl">Retourner</div>
-            </div>
-            <div class="ctrl-btn" onclick="flipV('lv-i')">
-              <div class="ctrl-ic">🪞</div>
-              <div class="ctrl-lbl">Miroir</div>
-            </div>
-            <div class="ctrl-btn" onclick="openFS('lv-i')">
-              <div class="ctrl-ic">⛶</div>
-              <div class="ctrl-lbl">Plein écran</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Aperçu caméra iOS -->
-      <div class="card" id="prev-card-i" style="display:none">
-        <div class="card-h">📷 Aperçu — ce que le receiver voit</div>
-        <div class="vwrap">
-          <video id="lv-i" autoplay playsinline muted></video>
-          <video id="rcam-inset-i" class="vcall-inset" autoplay playsinline title="Caméra receiver"></video>
-          <div class="vph" id="lph-i"><div class="vph-ic">📷</div><p>Aperçu caméra</p></div>
-        </div>
-      </div>
+            <div class="remote-video-container">
+                <video id="remoteVideo" autoplay playsinline></video>
+            </div>
 
-      <!-- QR iOS -->
-      <div class="card" id="qr-card-i" style="display:none">
-        <div class="card-h">📱 QR code à scanner par le receiver</div>
-        <div class="qrbox">
-          <div id="qrdiv-i"></div>
-          <p class="qr-url" id="qr-txt-i"></p>
-        </div>
-      </div>
+            <div class="local-video-container mirror" id="localVideoContainer">
+                <video id="localVideo" autoplay playsinline muted></video>
+            </div>
 
-      <!-- Peers iOS -->
-      <div class="card" id="peers-card-i" style="display:none">
-        <div class="card-h">👥 Appareils connectés</div>
-        <div class="plist" id="plist-i"><p style="color:var(--muted);font-size:12px">Aucun pour l'instant.</p></div>
-      </div>
-    </div>
-      <div class="card">
-        <div class="card-h">🔵 AirPlay — Miroir écran complet</div>
-        <div class="steps">
-          <div class="step">
-            <div class="snum">1</div>
-            <div class="sc"><h4>Ouvrir le Centre de contrôle</h4>
-              <p>Glissez vers le bas depuis le coin supérieur droit de l'écran.</p></div>
-          </div>
-          <div class="step">
-            <div class="snum">2</div>
-            <div class="sc"><h4>Miroir de l'écran</h4>
-              <p>Appuyez sur <strong>Miroir de l'écran</strong> (icône deux rectangles superposés).</p></div>
-          </div>
-          <div class="step">
-            <div class="snum">3</div>
-            <div class="sc"><h4>Choisir la destination</h4>
-              <p>Sélectionnez votre <strong>Apple TV</strong>, votre <strong>Mac</strong> (macOS Monterey+), ou un PC avec <strong>LonelyScreen / Reflector 4</strong> installé.</p></div>
-          </div>
+            <div class="controls">
+                <button class="control-btn" id="micBtn" onclick="toggleMic()" title="Microphone">
+                    🎤
+                    <span class="tooltip">Micro</span>
+                </button>
+                
+                <button class="control-btn" id="camBtn" onclick="toggleCam()" title="Caméra">
+                    📹
+                    <span class="tooltip">Caméra</span>
+                </button>
+                
+                <button class="control-btn" onclick="toggleMirror()" title="Miroir">
+                    🪞
+                    <span class="tooltip">Miroir</span>
+                </button>
+                
+                <button class="control-btn" onclick="togglePip()" title="Picture in Picture">
+                    🖼️
+                    <span class="tooltip">Mode PiP</span>
+                </button>
+                
+                <button class="control-btn danger" onclick="endCall()" title="Raccrocher">
+                    📵
+                    <span class="tooltip">Raccrocher</span>
+                </button>
+            </div>
         </div>
-      </div>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Connexion en cours...</p>
+        </div>
+
+        <!-- Notification -->
+        <div class="notification" id="notification"></div>
     </div>
 
-    <!-- ── ANDROID ── -->
-    <div id="block-android" style="display:none">
-
-      <!-- Onglets méthodes -->
-      <div class="card">
-        <div class="card-h">📱 Android — Choisissez une méthode</div>
-        <div class="mtabs">
-          <div class="mtab on" id="mt-cam"  onclick="switchMethod('cam')">📷 Caméra (direct)</div>
-          <div class="mtab" id="mt-cast" onclick="switchMethod('cast')">📡 Cast / Miracast</div>
-          <div class="mtab" id="mt-usb"  onclick="switchMethod('usb')">🔌 USB (scrcpy)</div>
-          <div class="mtab" id="mt-app"  onclick="switchMethod('app')">📲 App dédiée</div>
-        </div>
-
-        <!-- CAMERA -->
-        <div class="method-panel on" id="mp-cam">
-          <div class="ib ib-g">
-            <strong>✓ Méthode recommandée — fonctionne maintenant</strong>
-            La caméra est transmise en direct au receiver via WebRTC. Filmez votre écran ou utilisez un support.
-          </div>
-          <div class="row" style="margin-bottom:8px">
-            <input type="text" id="room-a" placeholder="Code de session…" maxlength="30"/>
-            <button class="btn btn-o" onclick="makeCode('a')">🎲</button>
-          </div>
-          <div id="shr-row-a" class="cpr" style="display:none">
-            <span id="shr-url-a"></span><button class="cpbtn" onclick="cpURL('a')">Copier</button>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-            <button class="btn btn-g" onclick="doCamera('a')">
-              <span class="spin" id="sp-a"></span>📷 Partager la caméra
-            </button>
-            <button class="btn btn-r" id="stop-btn-a" style="display:none" onclick="doStop()">⏹ Arrêter</button>
-          </div>
-          <div class="status s-idle" id="s-send-a">En attente…</div>
-        </div>
-
-        <!-- CAST -->
-        <div class="method-panel" id="mp-cast">
-          <div class="ib ib-b">
-            <strong>📡 Miroir d'écran natif Android</strong>
-            Android dispose d'une fonction Cast/Miracast intégrée. Le receiver peut regarder sur une TV, un PC ou via ce site.
-          </div>
-          <div class="steps">
-            <div class="step">
-              <div class="snum snum-y">1</div>
-              <div class="sc"><h4>Ouvrir les Paramètres rapides</h4>
-                <p>Glissez vers le bas deux fois pour afficher tous les raccourcis. Cherchez <strong>Cast</strong>, <strong>Diffusion</strong>, <strong>Smart View</strong> (Samsung) ou <strong>Partage d'écran</strong>.</p></div>
-            </div>
-            <div class="step">
-              <div class="snum snum-y">2</div>
-              <div class="sc"><h4>Choisir la cible</h4>
-                <p>Sélectionnez votre <strong>Chromecast</strong>, <strong>TV Android</strong>, ou un PC avec <strong>LetsView</strong> / <strong>AirDroid Cast</strong> installé.</p></div>
-            </div>
-            <div class="step">
-              <div class="snum snum-y">3</div>
-              <div class="sc"><h4>Receiver regarde sur le PC</h4>
-                <p>Une fois l'écran casté sur le PC, ouvrez ce site sur le PC et partagez la capture d'écran du PC vers le receiver — connexion en 2 étapes.</p></div>
-            </div>
-          </div>
-          <div class="hbox" style="margin-top:14px">
-            <h4>📲 Apps gratuites "Cast vers PC"</h4>
-            <ul>
-              <li><strong>LetsView</strong> — Android → PC, gratuit, Miracast/AirPlay</li>
-              <li><strong>AirDroid Cast</strong> — Android → PC via navigateur ou app</li>
-              <li><strong>ApowerMirror</strong> — Android → PC, WiFi ou USB</li>
-            </ul>
-            <div class="app-row">
-              <a class="app-chip" href="https://letsview.com" target="_blank">🌐 LetsView</a>
-              <a class="app-chip" href="https://www.airdroid.com/airdroid-cast/" target="_blank">🌐 AirDroid Cast</a>
-              <a class="app-chip" href="https://www.apowermirror.com" target="_blank">🌐 ApowerMirror</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- USB -->
-        <div class="method-panel" id="mp-usb">
-          <div class="ib ib-b">
-            <strong>🔌 scrcpy — Miroir USB gratuit et open source</strong>
-            La solution la plus fiable pour mirror Android → PC. Aucune latence, HD, gratuit.
-          </div>
-          <div class="steps">
-            <div class="step">
-              <div class="snum">1</div>
-              <div class="sc"><h4>Activer le débogage USB</h4>
-                <p>Paramètres → À propos du téléphone → tapez 7x sur <strong>Numéro de build</strong> → Options développeur → <strong>Débogage USB</strong> : activé.</p></div>
-            </div>
-            <div class="step">
-              <div class="snum">2</div>
-              <div class="sc"><h4>Installer scrcpy sur le PC</h4>
-                <p>Téléchargez sur GitHub : <strong>scrcpy</strong> (Windows/Mac/Linux). Branchez l'Android avec un câble USB. Lancez <code>scrcpy</code> dans un terminal.</p></div>
-            </div>
-            <div class="step">
-              <div class="snum">3</div>
-              <div class="sc"><h4>Partager depuis le PC</h4>
-                <p>L'écran Android apparaît dans une fenêtre sur le PC. Utilisez ensuite ce site depuis le PC pour envoyer ce flux au receiver.</p></div>
-            </div>
-          </div>
-          <div class="app-row">
-            <a class="app-chip" href="https://github.com/Genymobile/scrcpy/releases" target="_blank">📥 Télécharger scrcpy</a>
-          </div>
-        </div>
-
-        <!-- APP -->
-        <div class="method-panel" id="mp-app">
-          <div class="ib ib-b">
-            <strong>📲 Applications Android avec partage d'écran intégré</strong>
-            Ces apps contournent la limitation du navigateur en utilisant les permissions système Android.
-          </div>
-          <div class="hbox">
-            <h4>Applications recommandées</h4>
-            <ol>
-              <li><strong>TeamViewer QuickSupport</strong> — partage d'écran Android vers n'importe quel appareil</li>
-              <li><strong>AnyDesk</strong> — accès à distance et miroir d'écran</li>
-              <li><strong>Vysor</strong> — miroir Android → Chrome (extension PC)</li>
-              <li><strong>Google Meet / Zoom</strong> — partage d'écran Android intégré dans les appels</li>
-              <li><strong>Deskreen</strong> — miroir PC → tout appareil avec navigateur</li>
-            </ol>
-            <div class="app-row">
-              <a class="app-chip" href="https://play.google.com/store/apps/details?id=com.teamviewer.quicksupport.market" target="_blank">📱 TeamViewer</a>
-              <a class="app-chip" href="https://play.google.com/store/apps/details?id=com.anydesk.anydeskandroid" target="_blank">📱 AnyDesk</a>
-              <a class="app-chip" href="https://play.google.com/store/apps/details?id=com.koushikdutta.vysor" target="_blank">📱 Vysor</a>
-            </div>
-          </div>
-          <!-- Firefox Android option -->
-          <div class="hbox" style="margin-top:12px">
-            <h4>🦊 Option Firefox pour Android — Essayez le partage d'écran</h4>
-            <p style="font-size:12px;color:var(--muted);margin-bottom:8px">
-              Contrairement à Chrome, <strong>Firefox pour Android</strong> permet encore <code>getDisplayMedia</code> sur certaines versions.
-              Ouvrez ce site dans Firefox Android et utilisez le bouton <strong>Partager mon écran</strong> depuis l'onglet Émetteur.
-            </p>
-            <div class="app-row">
-              <a class="app-chip" href="https://play.google.com/store/apps/details?id=org.mozilla.firefox" target="_blank">🦊 Télécharger Firefox Android</a>
-            </div>
-            <p style="font-size:11px;color:var(--muted);margin-top:8px">
-              ⚠️ Non garanti sur toutes les versions — si ça ne marche pas, utilisez une app dédiée ci-dessus.
-            </p>
-          </div>
-          <div class="ib ib-y" style="margin-top:12px;margin-bottom:0">
-            <strong>Pourquoi Chrome Android ne peut pas capturer l'écran ?</strong>
-            Google a délibérément désactivé <code>getDisplayMedia</code> dans Chrome Android depuis Chrome 88. Ce n'est pas un bug — c'est une décision de sécurité. Seules les apps natives peuvent accéder à la capture d'écran via l'API <code>MediaProjection</code> d'Android. WhatsApp, Zoom, Meet utilisent leurs propres apps natives — impossible à reproduire depuis un site web sur Chrome.
-          </div>
-        </div>
-
-      </div>
-
-      <!-- QR & Preview pour Android camera -->
-      <div class="card" id="qr-card-a" style="display:none">
-        <div class="card-h">📱 QR code à scanner</div>
-        <div class="qrbox">
-          <div id="qrdiv-a"></div>
-          <p class="qr-url" id="qr-txt-a"></p>
-        </div>
-      </div>
-
-      <div class="card" id="prev-card-a" style="display:none">
-        <div class="card-h">📷 Aperçu caméra</div>
-        <div class="vwrap">
-          <video id="lv-a" autoplay playsinline muted></video>
-          <video id="rcam-inset-a" class="vcall-inset" autoplay playsinline title="Caméra receiver"></video>
-          <div class="vph" id="lph-a"><div class="vph-ic">📷</div><p>Aperçu caméra</p></div>
-        </div>
-        <div class="vctrls">
-          <button class="btn btn-o" onclick="flipV('lv-a')">🔄 Miroir</button>
-          <button class="btn btn-o" onclick="openFS('lv-a')">⛶ Plein écran</button>
-        </div>
-      </div>
-
-      <div class="card" id="peers-card-a" style="display:none">
-        <div class="card-h">👥 Appareils connectés</div>
-        <div class="plist" id="plist"><p style="color:var(--muted);font-size:12px">Aucun pour l'instant.</p></div>
-      </div>
-
-    </div><!-- /block-android -->
-
-    <!-- QR & Preview pour Desktop -->
-    <div id="desktop-extra" style="display:none">
-      <div class="card" id="qr-card-d" style="display:none">
-        <div class="card-h">📱 QR code à scanner</div>
-        <div class="qrbox">
-          <div id="qrdiv-d"></div>
-          <p class="qr-url" id="qr-txt-d"></p>
-        </div>
-      </div>
-      <div class="card" id="prev-card-d" style="display:none">
-        <div class="card-h">🖥️ Aperçu local</div>
-        <div class="vwrap">
-          <video id="lv-d" autoplay playsinline muted></video>
-          <video id="rcam-inset-d" class="vcall-inset" autoplay playsinline title="Caméra receiver"></video>
-          <div class="vph" id="lph-d"><div class="vph-ic">📷</div><p>Aperçu ici</p></div>
-        </div>
-        <div class="vctrls">
-          <button class="btn btn-o" onclick="flipV('lv-d')">🔄 Miroir</button>
-          <button class="btn btn-o" onclick="openFS('lv-d')">⛶ Plein écran</button>
-        </div>
-      </div>
-      <div class="card" id="peers-card-d" style="display:none">
-        <div class="card-h">👥 Appareils connectés</div>
-        <div class="plist" id="plist-d"><p style="color:var(--muted);font-size:12px">Aucun pour l'instant.</p></div>
-      </div>
-    </div>
-
-  </div><!-- /p-send -->
-
-  <!-- ══════════ RECEIVER ══════════ -->
-  <div class="panel" id="p-recv">
-
-    <div class="card">
-      <div class="card-h">🔗 Rejoindre une session</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
-        Entrez le code donné par l'émetteur, ou scannez son QR code.
-      </p>
-      <div class="row">
-        <input type="text" id="jcode" placeholder="Code ex : abc-xyz-123" maxlength="30" />
-      </div>
-
-      <!-- Bouton téléphone vert — Décrocher / Rejoindre -->
-      <div class="call-row" id="recv-start-row">
-        <div class="call-item">
-          <button class="call-btn call-btn-green" onclick="doJoin()" style="position:relative">
-            <span class="spin" id="j-sp" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)"></span>
-            <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
-            </svg>
-          </button>
-          <div class="call-label">Décrocher</div>
-        </div>
-      </div>
-
-      <!-- Bouton téléphone rouge — Raccrocher / Quitter — visible pendant la session -->
-      <div class="call-row" id="recv-stop-row" style="display:none">
-        <div class="call-item">
-          <button class="call-btn call-btn-red" onclick="doLeave()">
-            <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style="transform:rotate(135deg)">
-              <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>
-            </svg>
-          </button>
-          <div class="call-label">Raccrocher</div>
-        </div>
-      </div>
-
-      <div class="status s-idle" id="s-recv">En attente…</div>
-    </div>
-
-    <div class="card">
-      <div class="card-h">📺 Flux reçu</div>
-      <div class="vwrap" id="rv-wrap">
-        <video id="rv" autoplay playsinline></video>
-        <!-- Inset : aperçu de sa propre caméra (self-view) -->
-        <video id="self-cam-inset" class="vcall-inset" autoplay playsinline muted title="Votre caméra"></video>
-        <div class="vph" id="rph">
-          <div class="vph-ic">📡</div>
-          <p>L'écran partagé apparaîtra ici<br>une fois connecté.</p>
-        </div>
-      </div>
-      <!-- Contrôles appel vidéo bidirectionnel -->
-      <div id="rcv-call-ctrl">
-        <div class="vcall-badge">Appel en cours</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">
-          Activez votre caméra pour que l'émetteur vous voie aussi (style WhatsApp).
-        </div>
-        <div class="cam-ctrl-row">
-          <div class="ctrl-btn" id="rv-mic-btn" onclick="toggleRecvMic()">
-            <div class="ctrl-ic" id="rv-mic-ic">🎙️</div>
-            <div class="ctrl-lbl" id="rv-mic-lbl">Micro</div>
-          </div>
-          <div class="ctrl-btn" id="rv-cam-btn" onclick="toggleRecvCam()">
-            <div class="ctrl-ic" id="rv-cam-ic">📷</div>
-            <div class="ctrl-lbl" id="rv-cam-lbl">Ma caméra</div>
-          </div>
-          <div class="ctrl-btn" onclick="flipV('rv')">
-            <div class="ctrl-ic">🪞</div>
-            <div class="ctrl-lbl">Miroir</div>
-          </div>
-          <div class="ctrl-btn" onclick="openFS('rv')">
-            <div class="ctrl-ic">⛶</div>
-            <div class="ctrl-lbl">Plein écran</div>
-          </div>
-          <div class="ctrl-btn" id="pip-btn" style="display:none" onclick="doPiP()">
-            <div class="ctrl-ic">📺</div>
-            <div class="ctrl-lbl">PiP</div>
-          </div>
-        </div>
-      </div>
-      <!-- Ancien band de boutons — caché quand rcv-call-ctrl visible -->
-      <div class="vctrls" id="rv-vctrls-basic">
-        <button class="btn btn-o" onclick="flipV('rv')">🔄 Miroir</button>
-        <button class="btn btn-o" onclick="openFS('rv')">⛶ Plein écran</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-h">ℹ️ Ce qui fonctionne</div>
-      <div class="steps">
-        <div class="step"><div class="snum">✓</div>
-          <div class="sc"><h4>iOS → caméra partagée</h4>
-            <p>Le receiver reçoit le flux caméra de l'iPhone en temps réel. ✓ Confirmé fonctionnel.</p></div>
-        </div>
-        <div class="step"><div class="snum">✓</div>
-          <div class="sc"><h4>PC/Mac → écran entier</h4>
-            <p>Chrome, Edge, Firefox — partage d'onglet, fenêtre ou écran complet. ✓ Fonctionnel.</p></div>
-        </div>
-        <div class="step"><div class="snum">✓</div>
-          <div class="sc"><h4>Android → caméra partagée</h4>
-            <p>La caméra arrière ou avant est transmise en live. ✓ Fonctionnel via l'onglet Caméra.</p></div>
-        </div>
-        <div class="step"><div class="snum">⚠</div>
-          <div class="sc"><h4>Android → écran entier via navigateur</h4>
-            <p>Impossible nativement : Google a désactivé cette API dans Chrome Android. Utilisez Cast, scrcpy ou une app dédiée.</p></div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</main>
-
-<footer>
-  Screen Mirror Online · WebRTC P2P chiffré (DTLS/SRTP) · Aucun compte requis · GitHub Pages<br>
-  iOS caméra ✓ · PC écran ✓ · Android caméra ✓ · Android écran → Cast/scrcpy requis
-</footer>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-/* ================================================================
-   CONFIG ICE
-================================================================ */
-var ICE = {
-  iceServers:[
-    {urls:'stun:stun.l.google.com:19302'},
-    {urls:'stun:stun1.l.google.com:19302'},
-    {urls:'stun:stun2.l.google.com:19302'},
-    {urls:'stun:stun.cloudflare.com:3478'},
-    {urls:'turn:openrelay.metered.ca:80',    username:'openrelayproject',credential:'openrelayproject'},
-    {urls:'turn:openrelay.metered.ca:443',   username:'openrelayproject',credential:'openrelayproject'},
-    {urls:'turns:openrelay.metered.ca:443',  username:'openrelayproject',credential:'openrelayproject'}
-  ]
-};
-
-/* ================================================================
-   ÉTAT
-================================================================ */
-var mode        = 'webrtc';
-var localStream = null;
-var peer        = null;
-var senderConns = {};
-var flips       = {};
-var isIOS     = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-var isAndroid = /Android/.test(navigator.userAgent);
-var pjsReady  = false;
-var activeSuffix = 'd'; // 'd'esktop | 'a'ndroid | 'i'os
-var micMuted      = false;
-var camFacing     = 'environment';
-var recvCamStream = null;   // receiver's own camera stream
-var recvCamActive = false;  // is receiver cam on?
-var recvMicMuted  = false;  // is receiver mic muted?
-var senderPeerId  = null;   // sender's peer ID (used by receiver to call back)
-
-/* ================================================================
-   PEERJS LOAD — double CDN
-================================================================ */
-(function(){
-  var s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-  s.onload  = function(){ pjsReady=true; initPlatform(); };
-  s.onerror = function(){
-    var s2=document.createElement('script');
-    s2.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
-    s2.onload =function(){ pjsReady=true; initPlatform(); };
-    s2.onerror=function(){ alert('PeerJS non chargé — vérifiez votre connexion internet.'); };
-    document.head.appendChild(s2);
-  };
-  document.head.appendChild(s);
-})();
-
-/* ================================================================
-   INIT PLATFORM
-================================================================ */
-function initPlatform(){
-  var pi=document.getElementById('plat-info');
-  if(isIOS){
-    activeSuffix='i';
-    document.getElementById('block-ios').style.display='block';
-    pi.innerHTML='🍎 <strong>iPhone/iPad.</strong> Caméra disponible via ce site. Écran complet → AirPlay.';
-    pi.className='ib ib-y'; pi.style.display='block';
-  } else if(isAndroid){
-    activeSuffix='a';
-    document.getElementById('block-android').style.display='block';
-    pi.innerHTML='🤖 <strong>Android détecté.</strong> Caméra disponible maintenant. Écran complet → Cast ou scrcpy.';
-    pi.className='ib ib-g'; pi.style.display='block';
-  } else {
-    activeSuffix='d';
-    document.getElementById('block-desktop').style.display='block';
-    document.getElementById('desktop-extra').style.display='block';
-    pi.innerHTML='🖥️ <strong>PC/Mac détecté.</strong> Partagez un onglet, une fenêtre ou l\'écran entier.';
-    pi.className='ib ib-b'; pi.style.display='block';
-  }
-  /* URL params */
-  var c=new URLSearchParams(location.search).get('code');
-  if(c){ goTab('recv'); document.getElementById('jcode').value=c; setSt('s-recv','s-info','Code détecté — appuyez sur Rejoindre.'); }
-}
-
-/* ================================================================
-   TABS
-================================================================ */
-function goTab(t){
-  ['send','recv'].forEach(function(x){
-    document.getElementById('t-'+x).classList.toggle('on',x===t);
-    document.getElementById('p-'+x).classList.toggle('on',x===t);
-  });
-}
-
-/* ================================================================
-   MODE (desktop)
-================================================================ */
-function setMode(m){
-  mode=m;
-  document.getElementById('m-webrtc').classList.toggle('sel',m==='webrtc');
-  document.getElementById('m-local').classList.toggle('sel',m==='local');
-}
-
-/* ================================================================
-   ANDROID METHOD TABS
-================================================================ */
-function switchMethod(m){
-  ['cam','cast','usb','app'].forEach(function(x){
-    document.getElementById('mt-'+x).classList.toggle('on',x===m);
-    document.getElementById('mp-'+x).classList.toggle('on',x===m);
-  });
-}
-
-/* ================================================================
-   CODE / QR — suffix = 'd'|'a'|'i'
-================================================================ */
-function makeCode(sfx){
-  var ch='abcdefghjkmnpqrstuvwxyz23456789',s='';
-  for(var i=0;i<3;i++){for(var j=0;j<3;j++)s+=ch[Math.random()*ch.length|0];if(i<2)s+='-';}
-  document.getElementById('room-'+sfx).value=s;
-  renderLink(sfx,s);
-}
-
-function renderLink(sfx,code){
-  var url=location.origin+location.pathname+'?code='+encodeURIComponent(code);
-  document.getElementById('shr-url-'+sfx).textContent=url;
-  document.getElementById('shr-row-'+sfx).style.display='flex';
-  var d=document.getElementById('qrdiv-'+sfx);
-  if(!d) return;
-  d.innerHTML='';
-  new QRCode(d,{text:url,width:180,height:180,colorDark:'#fff',colorLight:'#21213d',correctLevel:QRCode.CorrectLevel.H});
-  document.getElementById('qr-txt-'+sfx).textContent=url;
-  document.getElementById('qr-card-'+sfx).style.display='block';
-}
-
-function cpURL(sfx){
-  var url=document.getElementById('shr-url-'+sfx).textContent;
-  navigator.clipboard.writeText(url).then(function(){
-    var b=document.querySelector('#shr-row-'+sfx+' .cpbtn');
-    b.textContent='✓ Copié'; setTimeout(function(){b.textContent='Copier';},2000);
-  }).catch(function(){prompt('Copiez ce lien :',url);});
-}
-
-/* ================================================================
-   DESKTOP — getDisplayMedia
-   DOIT être appelé directement dans le handler onclick
-================================================================ */
-function doStartDesktop(){
-  if(!pjsReady){alert('PeerJS en cours de chargement…');return;}
-  var code=document.getElementById('room-d').value.trim();
-  if(!code){makeCode('d');code=document.getElementById('room-d').value.trim();}
-
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){
-    setSt('s-send','s-err','✗ Navigateur non supporté. Utilisez Chrome ou Edge.');
-    return;
-  }
-
-  sp('sp-d',true);
-  setSt('s-send','s-info','Sélectionnez ce que vous souhaitez partager…');
-
-  /* Tentative 1 : avec audio */
-  navigator.mediaDevices.getDisplayMedia({video:{cursor:'always',frameRate:{ideal:30,max:60}},audio:true})
-  .then(function(stream){ gotStream(stream,'d',code); })
-  .catch(function(e){
-    if(e.name==='NotAllowedError'||e.name==='PermissionDeniedError'){
-      sp('sp-d',false);
-      setSt('s-send','s-warn','⚠ Permission refusée. Autorisez le partage d\'écran et réessayez.');
-      return;
-    }
-    /* Tentative 2 : sans audio */
-    navigator.mediaDevices.getDisplayMedia({video:true})
-    .then(function(stream){ gotStream(stream,'d',code); })
-    .catch(function(e2){
-      sp('sp-d',false);
-      if(e2.name==='NotAllowedError'||e2.name==='PermissionDeniedError'){
-        setSt('s-send','s-warn','⚠ Permission refusée.');
-      } else if(e2.name==='AbortError'){
-        setSt('s-send','s-warn','⚠ Partage annulé.');
-      } else {
-        setSt('s-send','s-err','✗ '+e2.name+': '+e2.message);
-      }
-    });
-  });
-}
-
-/* ================================================================
-   CAMERA — iOS & Android
-================================================================ */
-function doCamera(sfx){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    alert('Caméra non disponible sur ce navigateur.'); return;
-  }
-  var code=document.getElementById('room-'+sfx).value.trim();
-  if(!code){makeCode(sfx);code=document.getElementById('room-'+sfx).value.trim();}
-
-  var stId = sfx==='a' ? 's-send-a' : 's-send-i';
-  setSt(stId,'s-info','Accès caméra en cours…');
-  micMuted=false; camFacing='environment';
-
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:true})
-  .then(function(stream){ gotStream(stream,sfx,code); })
-  .catch(function(){
-    navigator.mediaDevices.getUserMedia({video:true,audio:true})
-    .then(function(stream){ camFacing='user'; gotStream(stream,sfx,code); })
-    .catch(function(e){
-      var stId2=sfx==='a'?'s-send-a':'s-send-i';
-      setSt(stId2,'s-err','✗ Caméra refusée : '+e.message);
-    });
-  });
-}
-
-/* ================================================================
-   GOT STREAM — commun
-================================================================ */
-function gotStream(stream,sfx,code){
-  localStream=stream;
-  var vt=stream.getVideoTracks()[0];
-  if(vt) vt.addEventListener('ended',function(){doStop();});
-
-  /* Aperçu */
-  var vid=document.getElementById('lv-'+sfx);
-  if(vid){
-    vid.srcObject=stream;
-    document.getElementById('lph-'+sfx).style.display='none';
-    document.getElementById('prev-card-'+sfx).style.display='block';
-  }
-  var pc=document.getElementById('peers-card-'+sfx);
-  if(pc) pc.style.display='block';
-
-  /* Boutons iOS spécifiques */
-  if(sfx==='i'){
-    document.getElementById('ios-start-row').style.display='none';
-    document.getElementById('ios-stop-row').style.display='flex';
-    document.getElementById('ios-cam-controls').style.display='block';
-    setSt('s-send-i','s-info','Connexion en cours…');
-  }
-
-  if(mode==='local'&&sfx==='d'){
-    setSt('s-send','s-ok','✓ Aperçu local actif.');
-    document.getElementById('go-btn-d').style.display='none';
-    document.getElementById('stop-btn-d').style.display='inline-flex';
-    return;
-  }
-
-  startSenderPeer(code,stream,sfx);
-}
-
-/* ================================================================
-   PEERJS — SENDER
-================================================================ */
-function startSenderPeer(code,stream,sfx){
-  destroyPeer();
-  var pid='smirror3-'+sanitize(code);
-
-  try { peer=new Peer(pid,peerCfg()); }
-  catch(e){
-    var stCatch = sfx==='a' ? 's-send-a' : (sfx==='i' ? 's-send-i' : 's-send');
-    setSt(stCatch,'s-err','✗ PeerJS : '+e.message);
-    return;
-  }
-
-  peer.on('open',function(){
-    var stId = sfx==='a' ? 's-send-a' : (sfx==='i' ? 's-send-i' : 's-send');
-    setSt(stId,'s-ok','✓ Session active — code : '+code);
-    if(sfx==='d'){
-      document.getElementById('go-btn-d').style.display='none';
-      document.getElementById('stop-btn-d').style.display='inline-flex';
-    } else if(sfx==='a'){
-      document.getElementById('stop-btn-a').style.display='inline-flex';
-    }
-    setBadge('En direct',true);
-    renderLink(sfx,code);
-  });
-
-  peer.on('connection',function(dc){
-    dc.on('open',function(){ dc.send({type:'hi'}); });
-    dc.on('data',function(d){
-      if(d&&d.type==='ready'){
-        var mc=peer.call(dc.peer,stream);
-        senderConns[dc.peer]=mc;
-        addPeer(dc.peer,sfx);
-        var stId=sfx==='a'?'s-send-a':'s-send';
-        setSt(stId,'s-ok','✓ Appareil connecté — streaming.');
-        mc.on('close',function(){removePeer(dc.peer,sfx);});
-      }
-    });
-    dc.on('close',function(){removePeer(dc.peer,sfx);});
-    dc.on('error',function(){removePeer(dc.peer,sfx);});
-  });
-
-  peer.on('error',function(err){
-    var stId = sfx==='a' ? 's-send-a' : (sfx==='i' ? 's-send-i' : 's-send');
-    if(err.type==='unavailable-id'){
-      setSt(stId,'s-warn','⚠ Code déjà utilisé. Générez-en un nouveau.');
-    } else {
-      setSt(stId,'s-err','✗ '+err.type+' — réessayez dans un instant.');
-    }
-  });
-
-  peer.on('disconnected',function(){
-    setTimeout(function(){if(peer)peer.reconnect();},2000);
-  });
-}
-
-/* ================================================================
-   PEERJS — RECEIVER
-================================================================ */
-function doJoin(){
-  if(!pjsReady){alert('PeerJS en cours de chargement…');return;}
-  var code=document.getElementById('jcode').value.trim();
-  if(!code){alert('Entrez un code de session.');return;}
-
-  sp('j-sp',true);
-  setSt('s-recv','s-info','Connexion en cours…');
-  destroyPeer();
-
-  try { peer=new Peer('smirror3-r-'+Date.now(),peerCfg()); }
-  catch(e){ sp('j-sp',false); setSt('s-recv','s-err','✗ PeerJS : '+e.message); return; }
-
-  peer.on('open',function(){
-    var sid='smirror3-'+sanitize(code);
-    senderPeerId=sid;
-    var dc=peer.connect(sid,{reliable:true,serialization:'json'});
-
-    dc.on('open',function(){
-      setSt('s-recv','s-info','Connexion établie — flux vidéo en route…');
-      dc.send({type:'ready'});
-    });
-    dc.on('error',function(e){ sp('j-sp',false); setSt('s-recv','s-err','✗ '+e); });
-    dc.on('close',function(){ setSt('s-recv','s-warn','⚠ L\'émetteur a interrompu le partage.'); clearRemote(); });
-  });
-
-  peer.on('call',function(call){
-    /* Répondre avec la cam receiver si active, sinon sans stream */
-    call.answer(recvCamStream||undefined);
-    call.on('stream',function(rs){
-      sp('j-sp',false);
-      document.getElementById('rv').srcObject=rs;
-      document.getElementById('rph').style.display='none';
-      setSt('s-recv','s-ok','✓ Flux reçu — appel en cours.');
-      setBadge('Connecté',true);
-      document.getElementById('recv-start-row').style.display='none';
-      document.getElementById('recv-stop-row').style.display='flex';
-      document.getElementById('rcv-call-ctrl').style.display='block';
-      document.getElementById('rv-vctrls-basic').style.display='none';
-      if(document.pictureInPictureEnabled) document.getElementById('pip-btn').style.display='flex';
-    });
-    call.on('close',function(){ clearRemote(); setSt('s-recv','s-warn','⚠ Flux interrompu.'); });
-    call.on('error',function(e){ clearRemote(); setSt('s-recv','s-err','✗ '+e); });
-  });
-
-  peer.on('error',function(err){
-    sp('j-sp',false);
-    if(err.type==='peer-unavailable'){
-      setSt('s-recv','s-err','✗ Session introuvable. Vérifiez le code ou attendez que l\'émetteur démarre.');
-    } else if(err.type==='network'){
-      setSt('s-recv','s-err','✗ Erreur réseau — vérifiez votre connexion internet.');
-    } else {
-      setSt('s-recv','s-err','✗ '+err.type);
-    }
-  });
-
-  /* ── Receiver appelle le sender avec sa caméra ── */
-  peer.on('call',function(incomingCall){
-    incomingCall.answer();   /* Pas de stream retour depuis sender */
-    incomingCall.on('stream',function(rs){
-      showRcamInset(rs, sfx);
-    });
-    incomingCall.on('close',function(){ hideRcamInset(sfx); });
-  });
-
-  peer.on('disconnected',function(){
-    setTimeout(function(){if(peer)peer.reconnect();},2000);
-  });
-}
-
-function showRcamInset(stream, sfx){
-  var insetId='rcam-inset-'+(sfx||activeSuffix);
-  var el=document.getElementById(insetId);
-  if(el){ el.srcObject=stream; el.style.display='block'; makeDraggable(el); }
-}
-function hideRcamInset(sfx){
-  var insetId='rcam-inset-'+(sfx||activeSuffix);
-  var el=document.getElementById(insetId);
-  if(el){ el.srcObject=null; el.style.display='none'; }
-}
-function clearAllInsets(){
-  ['d','a','i'].forEach(function(s){
-    var el=document.getElementById('rcam-inset-'+s);
-    if(el){ el.srcObject=null; el.style.display='none'; }
-  });
-}
-
-/* drag-to-move pour les vidéos inset */
-function makeDraggable(el){
-  if(el._drag) return; el._drag=true;
-  var ox=0,oy=0,sx=0,sy=0;
-  el.addEventListener('mousedown',startDrag);
-  el.addEventListener('touchstart',startDragT,{passive:true});
-  function startDrag(e){ e.preventDefault(); ox=el.offsetLeft; oy=el.offsetTop; sx=e.clientX; sy=e.clientY;
-    document.addEventListener('mousemove',onDrag); document.addEventListener('mouseup',stopDrag); }
-  function startDragT(e){ var t=e.touches[0]; ox=el.offsetLeft; oy=el.offsetTop; sx=t.clientX; sy=t.clientY;
-    document.addEventListener('touchmove',onDragT,{passive:true}); document.addEventListener('touchend',stopDrag); }
-  function onDrag(e){ move(e.clientX,e.clientY); }
-  function onDragT(e){ var t=e.touches[0]; move(t.clientX,t.clientY); }
-  function move(cx,cy){
-    var parent=el.parentElement; var pr=parent.getBoundingClientRect();
-    var nx=ox+(cx-sx); var ny=oy+(cy-sy);
-    nx=Math.max(0,Math.min(nx,pr.width-el.offsetWidth));
-    ny=Math.max(0,Math.min(ny,pr.height-el.offsetHeight));
-    el.style.right=''; el.style.bottom=''; el.style.left=nx+'px'; el.style.top=ny+'px';
-  }
-  function stopDrag(){ document.removeEventListener('mousemove',onDrag); document.removeEventListener('mouseup',stopDrag);
-    document.removeEventListener('touchmove',onDragT); document.removeEventListener('touchend',stopDrag); }
-}
-
-/* ================================================================
-   RECEIVER BIDIRECTIONAL CAM — mic / cam toggle
-================================================================ */
-function toggleRecvMic(){
-  if(!recvCamStream) return;
-  recvMicMuted=!recvMicMuted;
-  recvCamStream.getAudioTracks().forEach(function(t){ t.enabled=!recvMicMuted; });
-  var ic=document.getElementById('rv-mic-ic');
-  var lb=document.getElementById('rv-mic-lbl');
-  var btn=document.getElementById('rv-mic-btn');
-  if(ic) ic.textContent = recvMicMuted ? '🔇' : '🎙️';
-  if(lb) lb.textContent = recvMicMuted ? 'Mic coupé' : 'Micro';
-  if(btn) btn.style.opacity = recvMicMuted ? '0.5' : '1';
-}
-
-function toggleRecvCam(){
-  if(recvCamActive){ stopRecvCam(); }
-  else { startRecvCam(); }
-}
-
-function startRecvCam(){
-  if(!peer || !senderPeerId){
-    setSt('s-recv','s-warn','⚠ Connectez-vous d\'abord à une session.'); return;
-  }
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true})
-  .then(function(stream){
-    recvCamStream=stream;
-    recvCamActive=true;
-    recvMicMuted=false;
-    /* Aperçu de soi dans l'inset */
-    var sc=document.getElementById('self-cam-inset');
-    if(sc){ sc.srcObject=stream; sc.style.display='block'; makeDraggable(sc); }
-    /* Appeler le sender avec le stream camera */
-    var call=peer.call(senderPeerId, stream);
-    if(call){
-      call.on('stream',function(){});  /* sender ne stream pas de retour ici */
-    }
-    /* UI */
-    var ic=document.getElementById('rv-cam-ic');
-    var lb=document.getElementById('rv-cam-lbl');
-    var btn=document.getElementById('rv-cam-btn');
-    if(ic) ic.textContent='🟢';
-    if(lb) lb.textContent='Cam active';
-    if(btn){ btn.style.borderColor='var(--success)'; btn.style.background='rgba(34,211,168,.1)'; }
-    setSt('s-recv','s-ok','✓ Votre caméra est envoyée à l\'émetteur.');
-  })
-  .catch(function(e){
-    setSt('s-recv','s-err','✗ Caméra refusée : '+e.message);
-  });
-}
-
-function stopRecvCam(){
-  if(recvCamStream){ recvCamStream.getTracks().forEach(function(t){t.stop();}); recvCamStream=null; }
-  recvCamActive=false;
-  var sc=document.getElementById('self-cam-inset');
-  if(sc){ sc.srcObject=null; sc.style.display='none'; }
-  var ic=document.getElementById('rv-cam-ic');
-  var lb=document.getElementById('rv-cam-lbl');
-  var btn=document.getElementById('rv-cam-btn');
-  if(ic) ic.textContent='📷';
-  if(lb) lb.textContent='Ma caméra';
-  if(btn){ btn.style.borderColor=''; btn.style.background=''; btn.style.opacity='1'; }
-}
-
-function clearRemote(){
-  stopRecvCam();
-  senderPeerId=null;
-  document.getElementById('rv').srcObject=null;
-  document.getElementById('rph').style.display='flex';
-  document.getElementById('pip-btn').style.display='none';
-  document.getElementById('recv-start-row').style.display='flex';
-  document.getElementById('recv-stop-row').style.display='none';
-  document.getElementById('rcv-call-ctrl').style.display='none';
-  document.getElementById('rv-vctrls-basic').style.display='flex';
-}
-
-function doLeave(){
-  destroyPeer();
-  clearRemote();
-  setSt('s-recv','s-idle','En attente…');
-  setBadge('Prêt',false);
-}
-
-/* ================================================================
-   STOP
-================================================================ */
-function doStop(){
-  if(localStream){localStream.getTracks().forEach(function(t){t.stop();}); localStream=null;}
-  destroyPeer();
-
-  ['d','a','i'].forEach(function(sfx){
-    var v=document.getElementById('lv-'+sfx); if(v){v.srcObject=null;}
-    var lph=document.getElementById('lph-'+sfx); if(lph)lph.style.display='flex';
-    var pc=document.getElementById('prev-card-'+sfx); if(pc)pc.style.display='none';
-    var prc=document.getElementById('peers-card-'+sfx); if(prc)prc.style.display='none';
-    var sb=document.getElementById('stop-btn-'+sfx); if(sb)sb.style.display='none';
-  });
-
-  /* iOS : remettre les boutons téléphone + cacher contrôles cam */
-  var isRow=document.getElementById('ios-start-row'); if(isRow)isRow.style.display='flex';
-  var osRow=document.getElementById('ios-stop-row');  if(osRow)osRow.style.display='none';
-  var cc=document.getElementById('ios-cam-controls');  if(cc)cc.style.display='none';
-
-  /* Cacher les insets receiver cam */
-  clearAllInsets();
-
-  var gbd=document.getElementById('go-btn-d'); if(gbd)gbd.style.display='inline-flex';
-  setSt('s-send','s-idle','En attente…');
-  setSt('s-send-a','s-idle','En attente…');
-  setSt('s-send-i','s-idle','En attente…');
-  setBadge('Prêt',false);
-  clearAllPeers();
-}
-
-/* ================================================================
-   HELPERS
-================================================================ */
-function peerCfg(){
-  return {host:'0.peerjs.com',port:443,path:'/',secure:true,debug:0,config:ICE};
-}
-function sanitize(c){return c.replace(/[^a-z0-9]/gi,'').toLowerCase().slice(0,24);}
-function destroyPeer(){if(peer){try{peer.destroy();}catch(e){}peer=null;} senderConns={};}
-
-function addPeer(id,sfx){
-  var lid = sfx==='a' ? 'plist' : (sfx==='i' ? 'plist-i' : 'plist-d');
-  var l=document.getElementById(lid); if(!l)return;
-  if(document.getElementById('pi-'+id))return;
-  l.innerHTML='';
-  var d=document.createElement('div'); d.className='pitem'; d.id='pi-'+id;
-  d.innerHTML='<div class="pdot"></div><span class="pname">📱 Appareil connecté</span>'
-    +'<span class="pack" onclick="kickPeer(\''+id+'\')">Déconnecter</span>';
-  l.appendChild(d);
-}
-function removePeer(id,sfx){ var e=document.getElementById('pi-'+id); if(e)e.remove(); }
-function kickPeer(id){ if(senderConns[id]){try{senderConns[id].close();}catch(e){} delete senderConns[id];} removePeer(id); }
-function clearAllPeers(){
-  ['plist','plist-d','plist-i'].forEach(function(id){
-    var l=document.getElementById(id);
-    if(l)l.innerHTML='<p style="color:var(--muted);font-size:12px">Aucun pour l\'instant.</p>';
-  });
-}
-
-function flipV(id){ flips[id]=!flips[id]; document.getElementById(id).style.transform=flips[id]?'scaleX(-1)':''; }
-
-/* ================================================================
-   iOS CAM CONTROLS
-================================================================ */
-function toggleMic(){
-  if(!localStream) return;
-  micMuted=!micMuted;
-  localStream.getAudioTracks().forEach(function(t){ t.enabled=!micMuted; });
-  var ic=document.getElementById('mic-ic');
-  var lb=document.getElementById('mic-lbl');
-  if(ic) ic.textContent = micMuted ? '🔇' : '🎙️';
-  if(lb) lb.textContent = micMuted ? 'Mic coupé' : 'Micro actif';
-  var ctrl=document.getElementById('ctrl-mic');
-  if(ctrl) ctrl.style.opacity = micMuted ? '0.5' : '1';
-}
-
-function flipCamera(){
-  if(!localStream) return;
-  camFacing = camFacing==='environment' ? 'user' : 'environment';
-  /* Arrêter les pistes vidéo actuelles */
-  localStream.getVideoTracks().forEach(function(t){ t.stop(); });
-  navigator.mediaDevices.getUserMedia({video:{facingMode:camFacing},audio:!micMuted})
-  .then(function(newStream){
-    var newVid=newStream.getVideoTracks()[0];
-    /* Remplacer la piste dans tous les appels actifs */
-    Object.keys(senderConns).forEach(function(pid){
-      var conn=senderConns[pid];
-      if(conn&&conn.peerConnection){
-        conn.peerConnection.getSenders().forEach(function(sender){
-          if(sender.track&&sender.track.kind==='video') sender.replaceTrack(newVid);
+    <script>
+        // Variables globales
+        let localStream = null;
+        let remoteStream = null;
+        let peerConnection = null;
+        let sessionId = null;
+        let isCaller = false;
+        let callTimer = null;
+        let seconds = 0;
+        let micEnabled = true;
+        let camEnabled = true;
+        let isMirror = true;
+        let isPip = false;
+
+        // Configuration WebRTC
+        const config = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        // Générer un code de session
+        function generateSessionCode() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+
+        // Afficher notification
+        function showNotification(message, isError = false) {
+            const notif = document.getElementById('notification');
+            notif.textContent = message;
+            notif.className = 'notification ' + (isError ? 'error' : '') + ' show';
+            setTimeout(() => {
+                notif.classList.remove('show');
+            }, 3000);
+        }
+
+        // Modals
+        function showCreateModal() {
+            sessionId = generateSessionCode();
+            document.getElementById('sessionCode').textContent = sessionId;
+            
+            // Générer QR code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: sessionId,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function showJoinModal() {
+            document.getElementById('joinModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            stopScan();
+        }
+
+        // Démarrer l'appel (créateur)
+        async function startCall() {
+            closeModal('createModal');
+            isCaller = true;
+            await initializeCall();
+        }
+
+        // Rejoindre l'appel
+        async function joinCall() {
+            const code = document.getElementById('joinCode').value;
+            if (code.length !== 4) {
+                showNotification('Veuillez entrer un code valide à 4 chiffres', true);
+                return;
+            }
+            sessionId = code;
+            closeModal('joinModal');
+            isCaller = false;
+            await initializeCall();
+        }
+
+        // Scanner QR code
+        let scanInterval;
+        function startScan() {
+            const video = document.getElementById('video-scan');
+            const canvas = document.getElementById('canvas-scan');
+            const ctx = canvas.getContext('2d');
+            
+            video.style.display = 'block';
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.play();
+                    
+                    scanInterval = setInterval(() => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                document.getElementById('joinCode').value = code.data;
+                                stopScan();
+                                showNotification('QR code détecté !');
+                            }
+                        }
+                    }, 100);
+                })
+                .catch(err => {
+                    showNotification('Erreur caméra: ' + err.message, true);
+                });
+        }
+
+        function stopScan() {
+            const video = document.getElementById('video-scan');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            video.style.display = 'none';
+            clearInterval(scanInterval);
+        }
+
+        // Initialiser l'appel
+        async function initializeCall() {
+            document.getElementById('loading').classList.add('active');
+            
+            try {
+                // Obtenir les médias locales
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: "user"
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    }
+                });
+
+                document.getElementById('localVideo').srcObject = localStream;
+                
+                // Créer la connexion peer
+                createPeerConnection();
+                
+                // Ajouter les tracks
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // Simuler la connexion (dans une vraie app, utiliser un serveur signaling)
+                simulateSignaling();
+                
+                // Afficher l'interface
+                document.getElementById('homeScreen').style.display = 'none';
+                document.getElementById('callInterface').classList.add('active');
+                document.getElementById('loading').classList.remove('active');
+                
+                startTimer();
+                showNotification(isCaller ? 'Appel démarré ! En attente...' : 'Connexion établie !');
+                
+                // Mettre à jour le statut
+                updateStatus('Connecté', true);
+                
+            } catch (err) {
+                document.getElementById('loading').classList.remove('active');
+                showNotification('Erreur: ' + err.message, true);
+                console.error(err);
+            }
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(config);
+            
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    // Envoyer au pair via signaling server
+                    console.log('ICE candidate:', event.candidate);
+                }
+            };
+            
+            peerConnection.ontrack = event => {
+                if (event.streams && event.streams[0]) {
+                    document.getElementById('remoteVideo').srcObject = event.streams[0];
+                    showNotification('Participant connecté !');
+                }
+            };
+            
+            peerConnection.onconnectionstatechange = () => {
+                console.log('Connection state:', peerConnection.connectionState);
+                if (peerConnection.connectionState === 'connected') {
+                    updateStatus('Connecté', true);
+                } else if (peerConnection.connectionState === 'disconnected') {
+                    updateStatus('Déconnecté', false);
+                }
+            };
+        }
+
+        // Simulation de signaling (pour démo locale)
+        function simulateSignaling() {
+            // Dans une vraie application, ceci serait remplacé par WebSocket
+            setTimeout(() => {
+                // Simuler la réception du stream distant
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                const ctx = canvas.getContext('2d');
+                
+                // Créer un flux vidéo simulé
+                const stream = canvas.captureStream(30);
+                const track = stream.getVideoTracks()[0];
+                
+                // Dessiner un message
+                function draw() {
+                    ctx.fillStyle = '#2d3436';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#00d4ff';
+                    ctx.font = '30px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('En attente de connexion...', canvas.width/2, canvas.height/2);
+                    requestAnimationFrame(draw);
+                }
+                draw();
+                
+                // Note: Dans une vraie app, ceci viendrait du pair
+                // document.getElementById('remoteVideo').srcObject = stream;
+                
+            }, 1000);
+        }
+
+        // Contrôles
+        function toggleMic() {
+            if (localStream) {
+                const audioTrack = localStream.getAudioTracks()[0];
+                if (audioTrack) {
+                    audioTrack.enabled = !audioTrack.enabled;
+                    micEnabled = audioTrack.enabled;
+                    document.getElementById('micBtn').innerHTML = micEnabled ? '🎤<span class="tooltip">Micro</span>' : '🎤❌<span class="tooltip">Micro coupé</span>';
+                    document.getElementById('micBtn').classList.toggle('active', !micEnabled);
+                    showNotification(micEnabled ? 'Micro activé' : 'Micro coupé');
+                }
+            }
+        }
+
+        function toggleCam() {
+            if (localStream) {
+                const videoTrack = localStream.getVideoTracks()[0];
+                if (videoTrack) {
+                    videoTrack.enabled = !videoTrack.enabled;
+                    camEnabled = videoTrack.enabled;
+                    document.getElementById('camBtn').innerHTML = camEnabled ? '📹<span class="tooltip">Caméra</span>' : '📹❌<span class="tooltip">Caméra éteinte</span>';
+                    document.getElementById('camBtn').classList.toggle('active', !camEnabled);
+                    showNotification(camEnabled ? 'Caméra activée' : 'Caméra éteinte');
+                }
+            }
+        }
+
+        function toggleMirror() {
+            const container = document.getElementById('localVideoContainer');
+            isMirror = !isMirror;
+            container.classList.toggle('mirror', isMirror);
+            showNotification(isMirror ? 'Miroir activé' : 'Miroir désactivé');
+        }
+
+        function togglePip() {
+            const container = document.getElementById('localVideoContainer');
+            isPip = !isPip;
+            container.classList.toggle('pip', isPip);
+            
+            if (isPip) {
+                makeDraggable(container);
+            }
+            showNotification(isPip ? 'Mode Picture-in-Picture' : 'Mode normal');
+        }
+
+        function makeDraggable(element) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            
+            element.onmousedown = dragMouseDown;
+            
+            function dragMouseDown(e) {
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+                element.classList.add('dragging');
+            }
+            
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                element.style.right = "auto";
+                element.style.bottom = "auto";
+            }
+            
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+                element.classList.remove('dragging');
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function endCall() {
+            // Arrêter le timer
+            clearInterval(callTimer);
+            
+            // Arrêter les streams
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Fermer la connexion
+            if (peerConnection) {
+                peerConnection.close();
+            }
+            
+            // Réinitialiser l'UI
+            document.getElementById('callInterface').classList.remove('active');
+            document.getElementById('homeScreen').style.display = 'flex';
+            
+            // Reset variables
+            localStream = null;
+            remoteStream = null;
+            peerConnection = null;
+            seconds = 0;
+            
+            showNotification('Appel terminé');
+        }
+
+        // Timer
+        function startTimer() {
+            seconds = 0;
+            callTimer = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const secs = (seconds % 60).toString().padStart(2, '0');
+                document.getElementById('timer').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function updateStatus(text, connected) {
+            document.getElementById('statusText').textContent = text;
+            document.getElementById('statusDot').style.background = connected ? '#00d4ff' : '#ff416c';
+        }
+
+        // Gestion des raccourcis clavier
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('callInterface').classList.contains('active')) {
+                if (e.key === 'm' || e.key === 'M') toggleMic();
+                if (e.key === 'v' || e.key === 'V') toggleCam();
+                if (e.key === 'Escape') endCall();
+            }
         });
-      }
-    });
-    /* Mettre à jour l'aperçu local */
-    var vid=document.getElementById('lv-i');
-    var oldStream=localStream;
-    localStream=newStream;
-    /* Copier les pistes audio existantes si non muet */
-    oldStream.getAudioTracks().forEach(function(t){
-      newStream.addTrack(t);
-    });
-    if(vid) vid.srcObject=newStream;
-    newVid.addEventListener('ended',function(){doStop();});
-  })
-  .catch(function(e){ setSt('s-send-i','s-err','✗ Flip caméra : '+e.message); });
-}
 
-function doPiP(){
-  var v=document.getElementById('rv');
-  if(document.pictureInPictureElement)document.exitPictureInPicture();
-  else if(v.srcObject)v.requestPictureInPicture().catch(function(e){alert('PiP : '+e.message);});
-}
-
-function openFS(id){
-  var v=document.getElementById(id),o=document.getElementById('fso'),fv=document.getElementById('fsv');
-  if(!v||!v.srcObject){alert('Aucun flux actif.');return;}
-  fv.srcObject=v.srcObject; o.style.display='flex';
-  (o.requestFullscreen||o.webkitRequestFullscreen||function(){}).call(o);
-}
-function exitFS(){
-  document.getElementById('fso').style.display='none';
-  document.getElementById('fsv').srcObject=null;
-  (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
-}
-document.addEventListener('fullscreenchange',function(){if(!document.fullscreenElement)exitFS();});
-
-function setSt(id,cls,msg){var e=document.getElementById(id);if(!e)return;e.className='status '+cls;e.textContent=msg;}
-function sp(id,on){var e=document.getElementById(id);if(e)e.style.display=on?'inline-block':'none';}
-function setBadge(txt,on){var b=document.getElementById('hdr-badge');b.textContent=txt;b.className=on?'on':'';}
-
-document.addEventListener('DOMContentLoaded',function(){
-  document.getElementById('jcode').addEventListener('keydown',function(e){if(e.key==='Enter')doJoin();});
-});
-</script>
+        // Empêcher la fermeture accidentelle pendant un appel
+        window.addEventListener('beforeunload', (e) => {
+            if (document.getElementById('callInterface').classList.contains('active')) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
 </body>
 </html>
