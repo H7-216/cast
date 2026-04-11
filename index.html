@@ -1,535 +1,1298 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScreenShare P2P - 100% Local</title>
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Screen Mirror Online - Miroir d'écran gratuit</title>
+  <meta name="description" content="Miroir d'écran gratuit en ligne pour iOS et Android. Partagez votre écran sur n'importe quel appareil sans installation." />
+
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --primary: #3b82f6; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b;
-      --bg-dark: #0f172a; --bg-card: #1e293b; --text: #f8fafc; --text-muted: #94a3b8; --border: #334155;
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light: #e0e7ff;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --bg: #0f0f23;
+      --surface: #1a1a35;
+      --surface2: #252545;
+      --border: #2e2e55;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --radius: 14px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
-    body {
+
+    html, body {
+      height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #020617 100%);
-      min-height: 100vh; color: var(--text); line-height: 1.6;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
     }
-    .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-    
-    /* Header */
-    .header { text-align: center; padding: 30px 20px; }
-    .logo { display: inline-flex; align-items: center; gap: 15px; margin-bottom: 10px; }
-    .logo-icon { width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary), #1d4ed8); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 10px 30px rgba(59,130,246,0.3); }
-    h1 { font-size: 2.2rem; font-weight: 800; }
-    .subtitle { color: var(--text-muted); font-size: 1.1rem; }
-    
-    /* Alertes */
-    .alert { padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; animation: slideIn 0.3s ease; }
-    .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
-    .alert-warning { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #fcd34d; }
-    .alert-info { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
-    .alert-success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
-    
-    /* Cards */
-    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 20px; }
-    .card-title { font-size: 1.3rem; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-    .card-text { color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem; }
-    
-    /* Boutons */
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 24px; border-radius: 10px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%; margin-bottom: 10px; }
-    .btn-primary { background: linear-gradient(135deg, var(--primary), #1d4ed8); color: white; box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
-    .btn-success { background: linear-gradient(135deg, var(--success), #16a34a); color: white; box-shadow: 0 4px 15px rgba(34,197,94,0.4); }
-    .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
-    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-small { padding: 10px 16px; font-size: 0.875rem; width: auto; display: inline-flex; }
-    
-    /* Inputs */
-    .input { width: 100%; padding: 16px; font-size: 1.1rem; background: #0f172a; border: 2px solid var(--border); border-radius: 10px; color: var(--text); font-family: monospace; transition: all 0.2s; }
-    .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-    textarea.input { min-height: 120px; resize: vertical; font-size: 0.9rem; }
-    
-    /* Code box */
-    .code-box { background: #020617; border: 2px dashed var(--border); border-radius: 12px; padding: 20px; font-family: monospace; font-size: 0.85rem; word-break: break-all; color: var(--text-muted); position: relative; }
-    .code-box button { position: absolute; top: 10px; right: 10px; }
-    
-    /* Onglets */
-    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
-    .tab { padding: 10px 20px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-weight: 600; border-radius: 8px; transition: all 0.2s; }
-    .tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
-    .tab.active { color: var(--primary); background: rgba(59,130,246,0.1); }
-    
-    /* Status */
-    .status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; font-size: 0.875rem; border: 1px solid var(--border); }
-    .status.connected { border-color: var(--success); color: var(--success); background: rgba(34,197,94,0.1); }
-    .status.connecting { border-color: var(--warning); color: var(--warning); background: rgba(245,158,11,0.1); }
-    .status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-    @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    
-    /* Video */
-    .video-container { background: #000; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); margin-top: 20px; position: relative; }
-    video { width: 100%; max-height: 70vh; display: block; }
-    .live-badge { position: absolute; top: 15px; left: 15px; background: var(--danger); color: white; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: flex; align-items: center; gap: 6px; animation: blink 1s infinite; }
-    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
-    
-    .hidden { display: none !important; }
-    .section { margin-bottom: 30px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } h1 { font-size: 1.5rem; } }
+
+    /* ─── HEADER ─── */
+    header {
+      background: linear-gradient(135deg, #1a1a35 0%, #252545 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(79,70,229,0.4);
+    }
+
+    .logo-text h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    .logo-text p  { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+    .header-badge {
+      margin-left: auto;
+      background: rgba(16,185,129,0.15);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: var(--success);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: flex; align-items: center; gap: 5px;
+    }
+
+    .header-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ─── MAIN ─── */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 80px;
+    }
+
+    /* ─── TABS ─── */
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      box-shadow: 0 4px 12px rgba(79,70,229,0.35);
+    }
+
+    .tab-btn svg { width: 18px; height: 18px; }
+
+    /* ─── PANEL ─── */
+    .panel { display: none; animation: fadeIn 0.25s ease; }
+    .panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── SECTION CARD ─── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-primary { background: var(--primary-light); color: var(--primary-dark); }
+    .badge-success { background: rgba(16,185,129,0.15); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-warning { background: rgba(245,158,11,0.15); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+
+    /* ─── MODE GRID ─── */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 480px) { .mode-grid { grid-template-columns: 1fr; } }
+
+    .mode-card {
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .mode-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+    .mode-card.selected { border-color: var(--primary); background: rgba(79,70,229,0.12); }
+
+    .mode-card .icon { font-size: 32px; margin-bottom: 8px; }
+    .mode-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .mode-card p  { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+    /* ─── ROOM INPUT ─── */
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .input-group input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus { border-color: var(--primary); }
+    .input-group input::placeholder { color: var(--text-muted); }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px;
+      border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(79,70,229,0.4); }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success), #059669);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+    }
+
+    .btn-success:hover { transform: translateY(-1px); }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), #dc2626);
+      color: white;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ─── STATUS BAR ─── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 14px;
+    }
+
+    .status-bar.idle     { background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.2); color: var(--text-muted); }
+    .status-bar.info     { background: rgba(6,182,212,0.1);   border: 1px solid rgba(6,182,212,0.3);   color: var(--accent); }
+    .status-bar.success  { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.3);  color: var(--success); }
+    .status-bar.error    { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.3);   color: var(--danger); }
+    .status-bar.warning  { background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.3);  color: var(--warning); }
+
+    /* ─── VIDEO ─── */
+    .video-wrapper {
+      position: relative;
+      background: #000;
+      border-radius: var(--radius);
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      border: 1px solid var(--border);
+    }
+
+    .video-wrapper video {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .video-placeholder {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .video-placeholder .big-icon { font-size: 48px; }
+
+    .video-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── QR CODE ─── */
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 20px;
+      background: var(--surface2);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    #qrcode canvas, #qrcode img { border-radius: 8px; }
+
+    .qr-url {
+      font-size: 11px;
+      color: var(--text-muted);
+      word-break: break-all;
+      text-align: center;
+      max-width: 260px;
+    }
+
+    /* ─── STEPS ─── */
+    .steps { display: flex; flex-direction: column; gap: 12px; }
+
+    .step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-content h4  { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .step-content p   { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .step-content code {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+
+    /* ─── INFO BOXES ─── */
+    .info-box {
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .info-box.blue   { background: rgba(6,182,212,0.08);   border-left: 3px solid var(--accent);   color: #a5f3fc; }
+    .info-box.yellow { background: rgba(245,158,11,0.08);  border-left: 3px solid var(--warning);  color: #fde68a; }
+    .info-box.green  { background: rgba(16,185,129,0.08);  border-left: 3px solid var(--success);  color: #a7f3d0; }
+    .info-box.red    { background: rgba(239,68,68,0.08);   border-left: 3px solid var(--danger);   color: #fca5a5; }
+
+    .info-box strong { display: block; margin-bottom: 4px; font-weight: 700; }
+
+    /* ─── PEER LIST ─── */
+    .peer-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .peer-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .peer-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+
+    .peer-item .peer-name { font-size: 13px; font-weight: 500; flex: 1; }
+    .peer-item .peer-action { font-size: 12px; color: var(--primary); cursor: pointer; }
+
+    /* ─── SPINNER ─── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── DIVIDER ─── */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--text-muted); font-size: 12px;
+      margin: 16px 0;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── COPY INPUT ─── */
+    .copy-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-top: 8px;
+    }
+
+    .copy-row span { flex: 1; font-size: 12px; color: var(--text-muted); word-break: break-all; }
+
+    .copy-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ─── FULLSCREEN OVERLAY ─── */
+    #fullscreen-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: #000;
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #fullscreen-overlay video { width: 100%; height: 100%; object-fit: contain; }
+
+    #exit-fullscreen {
+      position: absolute; top: 16px; right: 16px;
+      background: rgba(255,255,255,0.15);
+      border: none; border-radius: 8px;
+      color: white; padding: 8px 14px;
+      font-size: 13px; cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 600px) {
+      .video-controls { gap: 6px; }
+      .btn { padding: 10px 14px; font-size: 13px; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- HEADER -->
-    <div class="header">
-      <div class="logo">
-        <div class="logo-icon">🖥️</div>
-        <h1>ScreenShare P2P</h1>
-      </div>
-      <p class="subtitle">Partage d'écran 100% local - Sans serveur - Direct P2P</p>
-    </div>
 
-    <!-- ALERTE FILE:// -->
-    <div id="file-alert" class="hidden">
-      <div class="alert alert-warning">
-        ⚠️ <strong>Mode fichier détecté !</strong> Le partage d'écran nécessite un serveur local. Choisissez une option ci-dessous :
-      </div>
-      
-      <div class="card">
-        <div class="card-title">🚀 Démarrer un serveur local (Simple)</div>
-        <div class="card-text">
-          Ouvrez un terminal dans ce dossier et exécutez une de ces commandes :
-        </div>
-        <div class="code-box" style="margin-bottom: 15px;">
-          <strong>Python (recommandé) :</strong><br>
-          python3 -m http.server 8080
-          <button class="btn btn-small btn-outline" onclick="copyText('python3 -m http.server 8080')">Copier</button>
-        </div>
-        <div class="code-box" style="margin-bottom: 15px;">
-          <strong>Node.js :</strong><br>
-          npx http-server -p 8080
-          <button class="btn btn-small btn-outline" onclick="copyText('npx http-server -p 8080')">Copier</button>
-        </div>
-        <div class="code-box">
-          <strong>PHP :</strong><br>
-          php -S localhost:8080
-          <button class="btn btn-small btn-outline" onclick="copyText('php -S localhost:8080')">Copier</button>
-        </div>
-        <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">
-          Puis ouvrez : <strong>http://localhost:8080</strong>
-        </p>
-      </div>
-    </div>
+<!-- FULLSCREEN OVERLAY -->
+<div id="fullscreen-overlay">
+  <video id="fullscreen-video" autoplay playsinline muted></video>
+  <button id="exit-fullscreen" onclick="exitFullscreen()">✕ Quitter</button>
+</div>
 
-    <!-- ONGLETS -->
-    <div class="tabs">
-      <button class="tab active" onclick="showTab('auto')" id="tab-auto">🌐 Mode Auto (Cloud)</button>
-      <button class="tab" onclick="showTab('manual')" id="tab-manual">🔗 Mode Manuel (100% Offline)</button>
-      <button class="tab" onclick="showTab('ip')" id="tab-ip">📡 Mode IP Local</button>
-    </div>
+<!-- HEADER -->
+<header>
+  <div class="logo-icon">📲</div>
+  <div class="logo-text">
+    <h1>Screen Mirror Online</h1>
+    <p>Miroir d'écran gratuit – aucune installation</p>
+  </div>
+  <div class="header-badge" id="header-status">Prêt</div>
+</header>
 
-    <!-- MODE AUTO (PeerJS Cloud) -->
-    <div id="content-auto" class="section">
-      <div class="card">
-        <div class="card-title">📺 Partager mon écran (Mode Cloud)</div>
-        <div class="card-text">
-          Utilise le serveur PeerJS gratuit pour la connexion. Fonctionne immédiatement si vous êtes sur HTTP/HTTPS.
-        </div>
-        
-        <div id="auto-step1">
-          <button class="btn btn-primary" onclick="startAutoShare()">🚀 Créer une salle</button>
-        </div>
-        
-        <div id="auto-step2" class="hidden">
-          <div style="background: #020617; border: 2px solid var(--primary); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px;">
-            <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px;">Code de salle :</div>
-            <div id="auto-room-code" style="font-size: 3rem; font-weight: 800; color: var(--primary); font-family: monospace; letter-spacing: 8px;">------</div>
-            <button class="btn btn-small btn-outline" onclick="copyRoomCode()" style="margin-top: 15px;">📋 Copier</button>
-          </div>
-          
-          <button class="btn btn-success" onclick="startScreenShare()">📺 Démarrer le partage d'écran</button>
-          <div id="auto-video-container" class="video-container hidden">
-            <span class="live-badge">● Live</span>
-            <video id="auto-local-video" autoplay playsinline muted></video>
-          </div>
-        </div>
-      </div>
+<!-- MAIN -->
+<main>
 
-      <div class="card">
-        <div class="card-title">📱 Recevoir un écran</div>
-        <input type="text" id="auto-join-code" class="input" placeholder="Entrez le code à 6 chiffres" maxlength="6" style="text-align: center; letter-spacing: 8px; font-size: 1.5rem; margin-bottom: 15px;">
-        <button class="btn btn-success" onclick="joinAutoRoom()" id="btn-auto-join" disabled>🔗 Se connecter</button>
-        <div id="auto-remote-video-container" class="video-container hidden" style="margin-top: 20px;">
-          <video id="auto-remote-video" autoplay playsinline style="width: 100%;"></video>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODE MANUEL (SDP Exchange) -->
-    <div id="content-manual" class="section hidden">
-      <div class="alert alert-info">
-        ℹ️ <strong>Mode 100% Offline :</strong> Aucun serveur nécessaire. Copiez-collez les codes entre les appareils.
-      </div>
-
-      <div class="grid-2">
-        <!-- Créateur -->
-        <div class="card">
-          <div class="card-title">📤 Envoyer mon écran</div>
-          
-          <div id="manual-step1">
-            <button class="btn btn-primary" onclick="createManualOffer()">1️⃣ Générer un code de connexion</button>
-          </div>
-          
-          <div id="manual-step2" class="hidden">
-            <div class="card-text" style="font-size: 0.85rem; color: var(--warning);">
-              <strong>Étape 1 :</strong> Copiez ce code et envoyez-le au receveur :
-            </div>
-            <div class="code-box" style="margin-bottom: 15px;">
-              <div id="manual-offer" style="max-height: 150px; overflow-y: auto;"></div>
-              <button class="btn btn-small btn-outline" onclick="copyOffer()">📋 Copier tout</button>
-            </div>
-            
-            <div class="card-text" style="font-size: 0.85rem; color: var(--warning);">
-              <strong>Étape 2 :</strong> Collez la réponse du receveur ici :
-            </div>
-            <textarea id="manual-answer-input" class="input" placeholder="Collez la réponse ici..."></textarea>
-            <button class="btn btn-success" onclick="acceptManualAnswer()" style="margin-top: 10px;">2️⃣ Connecter</button>
-          </div>
-          
-          <div id="manual-step3" class="hidden">
-            <div class="status connected" style="margin-bottom: 15px;">● Connecté</div>
-            <button class="btn btn-primary" onclick="startManualShare()">📺 Partager l'écran</button>
-            <div id="manual-video-container" class="video-container hidden" style="margin-top: 15px;">
-              <span class="live-badge">● Live</span>
-              <video id="manual-local-video" autoplay playsinline muted></video>
-            </div>
-          </div>
-        </div>
-
-        <!-- Receveur -->
-        <div class="card">
-          <div class="card-title">📥 Recevoir un écran</div>
-          
-          <div id="receive-step1">
-            <div class="card-text" style="font-size: 0.85rem;">
-              Collez le code de connexion de l'expéditeur :
-            </div>
-            <textarea id="receive-offer-input" class="input" placeholder="Collez le code ici..."></textarea>
-            <button class="btn btn-success" onclick="createManualAnswer()" style="margin-top: 10px;">1️⃣ Générer la réponse</button>
-          </div>
-          
-          <div id="receive-step2" class="hidden">
-            <div class="card-text" style="font-size: 0.85rem; color: var(--warning);">
-              <strong>Envoyez ce code à l'expéditeur :</strong>
-            </div>
-            <div class="code-box">
-              <div id="manual-answer" style="max-height: 150px; overflow-y: auto;"></div>
-              <button class="btn btn-small btn-outline" onclick="copyAnswer()">📋 Copier</button>
-            </div>
-            <div class="status connecting" style="margin-top: 15px;">● En attente de connexion...</div>
-          </div>
-          
-          <div id="receive-step3" class="hidden">
-            <div class="status connected" style="margin-bottom: 15px;">● Connecté - Réception...</div>
-            <div id="receive-video-container" class="video-container">
-              <video id="manual-remote-video" autoplay playsinline style="width: 100%;"></video>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODE IP -->
-    <div id="content-ip" class="section hidden">
-      <div class="card">
-        <div class="card-title">📡 Connexion par IP (Même réseau WiFi)</div>
-        <div class="card-text">
-          Pour les appareils sur le même réseau local. L'expéditeur doit être accessible via son IP.
-        </div>
-        
-        <div class="grid-2">
-          <div>
-            <div style="color: var(--text-muted); margin-bottom: 8px; font-size: 0.9rem;">Votre IP locale :</div>
-            <div id="my-ip" style="font-size: 1.5rem; font-weight: 700; color: var(--primary); font-family: monospace; margin-bottom: 15px;">Détection...</div>
-            <button class="btn btn-primary" onclick="detectIP()">🔄 Actualiser IP</button>
-          </div>
-          <div>
-            <div style="color: var(--text-muted); margin-bottom: 8px; font-size: 0.9rem;">IP du receveur :</div>
-            <input type="text" id="target-ip" class="input" placeholder="192.168.1.xxx" style="margin-bottom: 10px;">
-            <button class="btn btn-success" onclick="connectByIP()">🔗 Connecter</button>
-          </div>
-        </div>
-        
-        <div id="ip-status" style="margin-top: 20px;"></div>
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.85rem;">
-      <p>🔒 Connexion chiffrée P2P | 👥 2 participants max | 📱 Compatible tous appareils</p>
-      <p style="margin-top: 10px; font-size: 0.75rem;">
-        Mode Manuel = 100% offline | Mode Auto = Nécessite internet pour la signalisation uniquement
-      </p>
-    </div>
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('sender')" id="tab-sender">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/>
+      </svg>
+      Partager mon écran
+    </button>
+    <button class="tab-btn" onclick="switchTab('receiver')" id="tab-receiver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      Voir un écran partagé
+    </button>
   </div>
 
-  <script>
-    // ==================== UTILITAIRES ====================
-    const $ = id => document.getElementById(id);
-    
-    function copyText(text) {
-      navigator.clipboard.writeText(text).then(() => alert('Copié !'));
-    }
-    
-    function showTab(tab) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
-      $(`tab-${tab}`).classList.add('active');
-      $(`content-${tab}`).classList.remove('hidden');
-    }
-    
-    // Détection du mode fichier
-    if (window.location.protocol === 'file:') {
-      $('file-alert').classList.remove('hidden');
-    }
-    
-    // ==================== MODE AUTO (PeerJS) ====================
-    let autoPeer = null;
-    let autoCall = null;
-    let autoStream = null;
-    let roomCode = null;
-    
-    function startAutoShare() {
-      roomCode = Math.floor(100000 + Math.random() * 900000).toString();
-      $('auto-room-code').textContent = roomCode;
-      $('auto-step1').classList.add('hidden');
-      $('auto-step2').classList.remove('hidden');
-      
-      // Créer le peer
-      autoPeer = new Peer(roomCode, {
-        host: '0.peerjs.com',
-        port: 443,
-        secure: true,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ]
-        }
-      });
-      
-      autoPeer.on('call', (call) => {
-        if (!autoStream) {
-          call.close();
-          return;
-        }
-        autoCall = call;
-        call.answer(autoStream);
-        call.on('stream', (remoteStream) => {
-          console.log('Stream reçu');
-        });
-      });
-    }
-    
-    async function startScreenShare() {
-      try {
-        // Vérifier si on est en file://
-        if (window.location.protocol === 'file:') {
-          alert('❌ Impossible en mode fichier !\n\nUtilisez le Mode Manuel (100% offline) ou lancez un serveur local avec :\npython3 -m http.server 8080');
-          return;
-        }
-        
-        autoStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: 'always' },
-          audio: true
-        });
-        
-        $('auto-local-video').srcObject = autoStream;
-        $('auto-video-container').classList.remove('hidden');
-        
-        autoStream.getVideoTracks()[0].onended = () => {
-          $('auto-video-container').classList.add('hidden');
-          autoStream = null;
-        };
-        
-      } catch (err) {
-        alert('Erreur : ' + err.message + '\n\nConseil : Utilisez le Mode Manuel ci-dessus');
-      }
-    }
-    
-    function copyRoomCode() {
-      copyText(roomCode);
-    }
-    
-    // Rejoindre mode auto
-    $('auto-join-code').addEventListener('input', (e) => {
-      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
-      $('btn-auto-join').disabled = e.target.value.length !== 6;
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PANNEAU SENDER                              -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="panel active" id="panel-sender">
+
+    <!-- Détection plateforme -->
+    <div id="platform-banner" class="info-box blue" style="margin-bottom:18px; display:none;"></div>
+
+    <!-- Choix du mode de partage -->
+    <div class="card">
+      <div class="card-title">🖥️ Comment voulez-vous partager ?</div>
+      <div class="mode-grid">
+        <div class="mode-card selected" id="mode-webrtc" onclick="selectMode('webrtc')">
+          <div class="icon">🌐</div>
+          <h3>WebRTC P2P</h3>
+          <p>Direct entre appareils<br>Aucun serveur — Android &amp; PC</p>
+        </div>
+        <div class="mode-card" id="mode-local" onclick="selectMode('local')">
+          <div class="icon">📡</div>
+          <h3>Partage local</h3>
+          <p>Afficher sur cet écran<br>Boucle locale instantanée</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Code de session -->
+    <div class="card" id="session-card">
+      <div class="card-title">
+        🔑 Code de session
+        <span class="badge badge-success">Partagez-le au destinataire</span>
+      </div>
+
+      <div class="input-group">
+        <input type="text" id="room-input" placeholder="Entrez ou générez un code..." maxlength="24" />
+        <button class="btn btn-outline" onclick="genCode()">🎲 Générer</button>
+      </div>
+
+      <div id="share-link-row" class="copy-row" style="display:none;">
+        <span id="share-link-text"></span>
+        <button class="copy-btn" onclick="copyLink()">Copier</button>
+      </div>
+
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-primary" id="start-btn" onclick="startSession()">
+          <span class="spinner" id="start-spinner"></span>
+          📡 Démarrer le partage
+        </button>
+        <button class="btn btn-danger" id="stop-btn" onclick="stopSession()" style="display:none;">
+          ⏹ Arrêter
+        </button>
+      </div>
+
+      <div class="status-bar idle" id="sender-status" style="margin-top:14px;">
+        ⬤ &nbsp;En attente de configuration…
+      </div>
+    </div>
+
+    <!-- QR Code -->
+    <div class="card" id="qr-card" style="display:none;">
+      <div class="card-title">📱 Scanner pour rejoindre</div>
+      <div class="qr-container">
+        <div id="qrcode"></div>
+        <p class="qr-url" id="qr-url-text"></p>
+      </div>
+    </div>
+
+    <!-- Aperçu local -->
+    <div class="card" id="local-preview-card" style="display:none;">
+      <div class="card-title">🖥️ Aperçu — ce que les autres voient</div>
+      <div class="video-wrapper">
+        <video id="local-video" autoplay playsinline muted></video>
+        <div class="video-placeholder" id="local-placeholder">
+          <div class="big-icon">📸</div>
+          <p>L'aperçu apparaîtra ici une fois le partage commencé</p>
+        </div>
+      </div>
+      <div class="video-controls">
+        <button class="btn btn-outline" onclick="toggleMirror()">🔄 Miroir</button>
+        <button class="btn btn-outline" onclick="goFullscreen('local-video')">⛶ Plein écran</button>
+      </div>
+    </div>
+
+    <!-- Peers connectés -->
+    <div class="card" id="peers-card" style="display:none;">
+      <div class="card-title">👥 Appareils connectés</div>
+      <div class="peer-list" id="peer-list">
+        <p style="color:var(--text-muted); font-size:13px;">Aucun appareil connecté.</p>
+      </div>
+    </div>
+
+    <!-- Instructions iOS -->
+    <div class="card" id="ios-guide" style="display:none;">
+      <div class="card-title">
+        🍎 Guide iOS (iPhone / iPad)
+        <span class="badge badge-warning">Restriction Apple</span>
+      </div>
+      <div class="info-box yellow">
+        <strong>Limitation Apple</strong>
+        iOS ne permet pas aux navigateurs web d'accéder directement à l'écran. Utilisez l'une des méthodes ci-dessous.
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">A</div>
+          <div class="step-content">
+            <h4>Via AirPlay (Apple TV / Mac)</h4>
+            <p>Ouvrez le Centre de contrôle → touchez <strong>Miroir de l'écran</strong> → sélectionnez votre Apple TV ou Mac.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">B</div>
+          <div class="step-content">
+            <h4>Via une app tierce</h4>
+            <p>Installez <strong>LonelyScreen</strong>, <strong>Reflector 4</strong> ou <strong>AirServer</strong> sur votre PC/Mac, puis utilisez AirPlay depuis l'iPhone.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">C</div>
+          <div class="step-content">
+            <h4>Via câble Lightning / USB-C</h4>
+            <p>Branchez l'iPhone à votre Mac et utilisez <strong>QuickTime Player</strong> → Fichier → Nouveau film enregistré → sélectionnez l'iPhone.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">D</div>
+          <div class="step-content">
+            <h4>Fonctionnement caméra</h4>
+            <p>Sur Safari iOS, le partage de la <strong>caméra</strong> (pas l'écran) est disponible ci-dessous — utile pour montrer ce que vous voyez.</p>
+            <button class="btn btn-primary" style="margin-top:8px;" onclick="startCamera()">📷 Partager la caméra</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-sender -->
+
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- PANNEAU RECEIVER                            -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="panel" id="panel-receiver">
+
+    <div class="card">
+      <div class="card-title">🔗 Rejoindre une session</div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+        Entrez le code de session fourni par l'émetteur, ou scannez le QR code affiché sur son appareil.
+      </p>
+
+      <div class="input-group">
+        <input type="text" id="join-code" placeholder="Code de session ex: abc-123…" maxlength="24" />
+        <button class="btn btn-success" onclick="joinSession()">
+          <span class="spinner" id="join-spinner"></span>
+          ▶ Rejoindre
+        </button>
+      </div>
+
+      <div class="status-bar idle" id="receiver-status" style="margin-top:10px;">
+        ⬤ &nbsp;En attente de connexion…
+      </div>
+    </div>
+
+    <!-- Écran reçu -->
+    <div class="card">
+      <div class="card-title">📺 Écran reçu</div>
+      <div class="video-wrapper">
+        <video id="remote-video" autoplay playsinline></video>
+        <div class="video-placeholder" id="remote-placeholder">
+          <div class="big-icon">📡</div>
+          <p>L'écran partagé apparaîtra ici<br>une fois la connexion établie.</p>
+        </div>
+      </div>
+      <div class="video-controls">
+        <button class="btn btn-outline" onclick="toggleRemoteMirror()">🔄 Miroir</button>
+        <button class="btn btn-outline" onclick="goFullscreen('remote-video')">⛶ Plein écran</button>
+        <button class="btn btn-outline" id="pip-btn" onclick="togglePiP()" style="display:none;">📺 PiP</button>
+        <button class="btn btn-danger" id="leave-btn" onclick="leaveSession()" style="display:none;">✕ Quitter</button>
+      </div>
+    </div>
+
+    <!-- Info ─ ce site peut aussi recevoir depuis AirPlay via certaines apps -->
+    <div class="card">
+      <div class="card-title">ℹ️ À savoir</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Android → PC / autre onglet</h4>
+            <p>Sur Android Chrome, l'émetteur clique <em>Démarrer le partage</em> et accepte la permission. La vidéo apparaît ici en temps réel via WebRTC.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>PC → PC</h4>
+            <p>Fonctionne nativement avec Chrome, Edge et Firefox. Choisissez de partager un onglet, une fenêtre ou tout l'écran.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>iOS (iPhone / iPad)</h4>
+            <p>Safari iOS ne supporte pas <code>getDisplayMedia</code>. Utilisez AirPlay ou une app tierce côté émetteur, puis visualisez sur cet écran.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /panel-receiver -->
+
+</main>
+
+<footer>
+  Screen Mirror Online — Fonctionne entièrement dans le navigateur · Aucun compte requis · Connexion P2P chiffrée (DTLS/SRTP)<br>
+  Compatible Chrome, Edge, Firefox (Android &amp; Desktop) · Safari iOS limité par Apple · GitHub Pages
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────────────────────────────────────────
+   SIGNALING via BroadcastChannel (même origine) + PeerJS fallback
+   Pour un usage cross-onglet / cross-appareil sur le même réseau,
+   on utilise PeerJS (serveur de signaling PeerJS public) pour le WebRTC.
+   ───────────────────────────────────────────────────────────────────── */
+
+/* Chargement dynamique de PeerJS */
+(function(){
+  var s = document.createElement('script');
+  s.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
+  s.onload = function(){ onPeerJSLoaded(); };
+  s.onerror = function(){ setGlobalStatus('PeerJS non chargé – vérifiez votre connexion internet.', 'error'); };
+  document.head.appendChild(s);
+})();
+
+/* ─── État global ─── */
+var currentTab    = 'sender';
+var currentMode   = 'webrtc';
+var localStream   = null;
+var peer          = null;          // Peer local PeerJS
+var activeConns   = {};            // id → DataConnection ou MediaConnection
+var receiverConn  = null;          // côté receiver
+var mirrored      = false;
+var remoteMirrored = false;
+var peerJSReady   = false;
+
+/* ─── Détection plateforme ─── */
+var isIOS     = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+var isAndroid = /Android/.test(navigator.userAgent);
+var isMobile  = isIOS || isAndroid;
+var ua        = navigator.userAgent;
+
+/* ─── Init ─── */
+function onPeerJSLoaded(){
+  peerJSReady = true;
+  showPlatformBanner();
+  checkURLParams();
+}
+
+function showPlatformBanner(){
+  var el  = document.getElementById('platform-banner');
+  var ios = document.getElementById('ios-guide');
+
+  if(isIOS){
+    el.innerHTML = '🍎 <strong>iPhone / iPad détecté.</strong> iOS restreint le partage d\'écran via navigateur. Consultez le guide Apple ci-dessous ou utilisez la caméra.';
+    el.style.display = 'block';
+    ios.style.display = 'block';
+    document.getElementById('session-card').style.display = 'none';
+  } else if(isAndroid){
+    el.innerHTML = '🤖 <strong>Android détecté.</strong> Chrome Android supporte le partage d\'écran — appuyez sur "Démarrer le partage" et accordez la permission.';
+    el.style.display = 'block';
+    el.className = 'info-box green';
+  } else {
+    el.innerHTML = '🖥️ <strong>Ordinateur détecté.</strong> Vous pouvez partager un onglet, une fenêtre ou tout l\'écran.';
+    el.style.display = 'block';
+    el.className = 'info-box blue';
+  }
+}
+
+/* ─── Paramètre URL (code auto-fill) ─── */
+function checkURLParams(){
+  var params = new URLSearchParams(window.location.search);
+  var code   = params.get('code');
+  if(code){
+    switchTab('receiver');
+    document.getElementById('join-code').value = code;
+    setStatus('receiver-status', 'info', 'Code détecté depuis le lien — cliquez Rejoindre.');
+  }
+}
+
+/* ─── Onglets ─── */
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+}
+
+/* ─── Mode ─── */
+function selectMode(mode){
+  currentMode = mode;
+  document.querySelectorAll('.mode-card').forEach(function(c){ c.classList.remove('selected'); });
+  document.getElementById('mode-'+mode).classList.add('selected');
+}
+
+/* ─── Génération de code ─── */
+function genCode(){
+  var chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  var code  = '';
+  for(var i=0;i<3;i++){
+    for(var j=0;j<3;j++) code += chars.charAt(Math.floor(Math.random()*chars.length));
+    if(i<2) code += '-';
+  }
+  document.getElementById('room-input').value = code;
+  buildShareLink(code);
+}
+
+function buildShareLink(code){
+  var base = window.location.origin + window.location.pathname;
+  var url  = base + '?code=' + encodeURIComponent(code);
+  document.getElementById('share-link-text').textContent = url;
+  document.getElementById('share-link-row').style.display = 'flex';
+  buildQR(url, code);
+}
+
+function copyLink(){
+  var url = document.getElementById('share-link-text').textContent;
+  navigator.clipboard.writeText(url).then(function(){
+    var btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copié!';
+    setTimeout(function(){ btn.textContent = 'Copier'; }, 2000);
+  }).catch(function(){
+    prompt('Copiez ce lien :', url);
+  });
+}
+
+function buildQR(url, code){
+  var el = document.getElementById('qrcode');
+  el.innerHTML = '';
+  new QRCode(el, {
+    text: url,
+    width: 180, height: 180,
+    colorDark: '#ffffff',
+    colorLight: '#1a1a35',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+  document.getElementById('qr-url-text').textContent = url;
+  document.getElementById('qr-card').style.display = 'block';
+}
+
+/* ─── Démarrer le partage (SENDER) ─── */
+function startSession(){
+  if(!peerJSReady){ alert('PeerJS en cours de chargement, patientez…'); return; }
+
+  var code = document.getElementById('room-input').value.trim();
+  if(!code){ genCode(); code = document.getElementById('room-input').value.trim(); }
+
+  showSpinner('start-spinner', true);
+  setStatus('sender-status', 'info', 'Capture de l\'écran en cours…');
+
+  if(currentMode === 'local'){
+    captureScreen(function(stream){
+      localStream = stream;
+      showLocalPreview(stream);
+      showSpinner('start-spinner', false);
+      setStatus('sender-status', 'success', '✓ Partage local actif — aperçu affiché ci-dessous.');
+      document.getElementById('start-btn').style.display = 'none';
+      document.getElementById('stop-btn').style.display  = 'inline-flex';
     });
-    
-    function joinAutoRoom() {
-      const code = $('auto-join-code').value;
-      const peerId = 'recv_' + Date.now();
-      
-      const peer = new Peer(peerId, {
-        host: '0.peerjs.com',
-        port: 443,
-        secure: true
-      });
-      
-      peer.on('open', () => {
-        const call = peer.call(code, new MediaStream());
-        if (call) {
-          call.on('stream', (stream) => {
-            $('auto-remote-video').srcObject = stream;
-            $('auto-remote-video-container').classList.remove('hidden');
-          });
-        }
-      });
+    return;
+  }
+
+  /* Mode WebRTC P2P */
+  captureScreen(function(stream){
+    localStream = stream;
+    showLocalPreview(stream);
+    initSenderPeer(code, stream);
+  });
+}
+
+function captureScreen(cb){
+  /* iOS → caméra uniquement */
+  if(isIOS){
+    startCamera(); return;
+  }
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia){
+    setStatus('sender-status', 'error', '✗ getDisplayMedia non supporté sur ce navigateur.');
+    showSpinner('start-spinner', false);
+    return;
+  }
+
+  navigator.mediaDevices.getDisplayMedia({
+    video: { frameRate: { ideal: 30, max: 60 }, cursor: 'always' },
+    audio: true
+  }).then(function(s){
+    s.getVideoTracks()[0].addEventListener('ended', function(){ stopSession(); });
+    cb(s);
+  }).catch(function(e){
+    showSpinner('start-spinner', false);
+    if(e.name === 'NotAllowedError'){
+      setStatus('sender-status', 'warning', '⚠ Permission refusée — autorisez le partage d\'écran.');
+    } else {
+      setStatus('sender-status', 'error', '✗ Erreur : ' + e.message);
     }
-    
-    // ==================== MODE MANUEL (SDP) ====================
-    let manualPC = null;
-    let manualStream = null;
-    
-    async function createManualOffer() {
-      manualPC = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
-      
-      // Créer l'offre
-      const offer = await manualPC.createOffer();
-      await manualPC.setLocalDescription(offer);
-      
-      // Attendre les candidats ICE
-      await new Promise(resolve => {
-        if (manualPC.iceGatheringState === 'complete') resolve();
-        manualPC.onicegatheringstatechange = () => {
-          if (manualPC.iceGatheringState === 'complete') resolve();
-        };
-        setTimeout(resolve, 2000); // Timeout de secours
-      });
-      
-      const offerStr = btoa(JSON.stringify(manualPC.localDescription));
-      $('manual-offer').textContent = offerStr;
-      $('manual-step1').classList.add('hidden');
-      $('manual-step2').classList.remove('hidden');
-    }
-    
-    function copyOffer() {
-      copyText($('manual-offer').textContent);
-    }
-    
-    async function acceptManualAnswer() {
-      const answerStr = $('manual-answer-input').value.trim();
-      if (!answerStr) return alert('Collez la réponse d\'abord !');
-      
-      try {
-        const answer = JSON.parse(atob(answerStr));
-        await manualPC.setRemoteDescription(answer);
-        
-        $('manual-step2').classList.add('hidden');
-        $('manual-step3').classList.remove('hidden');
-        
-        manualPC.onicecandidate = (e) => {
-          if (!e.candidate) console.log('ICE terminé');
-        };
-        
-      } catch (e) {
-        alert('Code invalide !');
+  });
+}
+
+function startCamera(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    alert('Caméra non disponible sur ce navigateur.'); return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(function(s){
+    localStream = s;
+    showLocalPreview(s);
+    var code = document.getElementById('room-input').value.trim();
+    if(!code){ genCode(); code = document.getElementById('room-input').value.trim(); }
+    initSenderPeer(code, s);
+  }).catch(function(e){
+    alert('Permission caméra refusée : ' + e.message);
+  });
+}
+
+function showLocalPreview(stream){
+  var vid = document.getElementById('local-video');
+  vid.srcObject = stream;
+  document.getElementById('local-placeholder').style.display  = 'none';
+  document.getElementById('local-preview-card').style.display = 'block';
+  document.getElementById('peers-card').style.display         = 'block';
+}
+
+/* ─── PeerJS – côté SENDER ─── */
+function initSenderPeer(code, stream){
+  destroyPeer();
+
+  var peerId = 'smirror-s-' + code.replace(/-/g,'');
+
+  try {
+    peer = new Peer(peerId, {
+      host: 'peerjs.com', port: 443, path: '/', secure: true,
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' },
+          { urls: 'turn:openrelay.metered.ca:80',    username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443',   username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
       }
-    }
-    
-    async function startManualShare() {
-      try {
-        manualStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true
-        });
-        
-        manualStream.getTracks().forEach(track => {
-          manualPC.addTrack(track, manualStream);
-        });
-        
-        $('manual-local-video').srcObject = manualStream;
-        $('manual-video-container').classList.remove('hidden');
-        
-      } catch (err) {
-        alert('Erreur partage : ' + err.message);
+    });
+  } catch(e){
+    setStatus('sender-status','error','✗ PeerJS non initialisé : '+e.message);
+    showSpinner('start-spinner', false);
+    return;
+  }
+
+  peer.on('open', function(id){
+    showSpinner('start-spinner', false);
+    setStatus('sender-status', 'success', '✓ Session active — Code : ' + code + ' — En attente de connexions…');
+    document.getElementById('start-btn').style.display = 'none';
+    document.getElementById('stop-btn').style.display  = 'inline-flex';
+    setHeaderStatus('En direct', 'success');
+    buildShareLink(code);
+  });
+
+  peer.on('connection', function(conn){
+    /* Data connection : handshake */
+    conn.on('open', function(){
+      conn.send({ type: 'hello', code: code });
+    });
+    conn.on('data', function(data){
+      if(data && data.type === 'ready'){
+        /* Envoyer le stream au receiver */
+        var mc = peer.call(conn.peer, stream);
+        activeConns[conn.peer] = mc;
+        addPeerItem(conn.peer);
+        setStatus('sender-status','success','✓ Appareil connecté — streaming en cours.');
       }
+    });
+    conn.on('close', function(){ removePeerItem(conn.peer); });
+    conn.on('error', function(){ removePeerItem(conn.peer); });
+  });
+
+  peer.on('error', function(err){
+    showSpinner('start-spinner', false);
+    if(err.type === 'unavailable-id'){
+      setStatus('sender-status', 'warning', '⚠ Ce code est déjà utilisé. Générez-en un nouveau.');
+    } else if(err.type === 'peer-unavailable'){
+      setStatus('sender-status', 'error', '✗ Destinataire introuvable.');
+    } else {
+      setStatus('sender-status', 'error', '✗ Erreur réseau : ' + err.type);
     }
-    
-    // Receveur manuel
-    let receivePC = null;
-    
-    async function createManualAnswer() {
-      const offerStr = $('receive-offer-input').value.trim();
-      if (!offerStr) return alert('Collez le code de connexion !');
-      
-      try {
-        const offer = JSON.parse(atob(offerStr));
-        
-        receivePC = new RTCPeerConnection({
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
-        
-        receivePC.ontrack = (e) => {
-          $('manual-remote-video').srcObject = e.streams[0];
-          $('receive-step2').classList.add('hidden');
-          $('receive-step3').classList.remove('hidden');
-        };
-        
-        await receivePC.setRemoteDescription(offer);
-        
-        const answer = await receivePC.createAnswer();
-        await receivePC.setLocalDescription(answer);
-        
-        // Attendre ICE
-        await new Promise(resolve => {
-          if (receivePC.iceGatheringState === 'complete') resolve();
-          receivePC.onicegatheringstatechange = () => {
-            if (receivePC.iceGatheringState === 'complete') resolve();
-          };
-          setTimeout(resolve, 2000);
-        });
-        
-        const answerStr = btoa(JSON.stringify(receivePC.localDescription));
-        $('manual-answer').textContent = answerStr;
-        $('receive-step1').classList.add('hidden');
-        $('receive-step2').classList.remove('hidden');
-        
-      } catch (e) {
-        alert('Code invalide ! Détails : ' + e.message);
+  });
+}
+
+/* ─── PeerJS – côté RECEIVER ─── */
+function joinSession(){
+  if(!peerJSReady){ alert('PeerJS en cours de chargement, patientez…'); return; }
+
+  var code = document.getElementById('join-code').value.trim();
+  if(!code){ alert('Entrez un code de session.'); return; }
+
+  showSpinner('join-spinner', true);
+  setStatus('receiver-status','info','Connexion en cours…');
+
+  destroyPeer();
+
+  var localId  = 'smirror-r-' + Date.now();
+  var senderId = 'smirror-s-' + code.replace(/-/g,'');
+
+  try {
+    peer = new Peer(localId, {
+      host: 'peerjs.com', port: 443, path: '/', secure: true,
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' },
+          { urls: 'turn:openrelay.metered.ca:80',    username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443',   username: 'openrelayproject', credential: 'openrelayproject' },
+          { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ]
       }
+    });
+  } catch(e){
+    setStatus('receiver-status','error','✗ PeerJS non initialisé : '+e.message);
+    showSpinner('join-spinner', false);
+    return;
+  }
+
+  peer.on('open', function(){
+    /* Connexion data vers sender */
+    receiverConn = peer.connect(senderId, { reliable: true });
+
+    receiverConn.on('open', function(){
+      setStatus('receiver-status','info','Connexion établie — en attente du flux vidéo…');
+      receiverConn.send({ type: 'ready' });
+    });
+
+    receiverConn.on('data', function(data){
+      if(data && data.type === 'hello'){
+        /* OK */
+      }
+    });
+
+    receiverConn.on('error', function(e){
+      showSpinner('join-spinner',false);
+      setStatus('receiver-status','error','✗ Erreur de connexion : ' + e);
+    });
+
+    receiverConn.on('close', function(){
+      setStatus('receiver-status','warning','⚠ L\'émetteur a interrompu le partage.');
+      setHeaderStatus('Déconnecté', 'idle');
+      clearRemoteVideo();
+    });
+  });
+
+  /* Réception du stream vidéo */
+  peer.on('call', function(call){
+    call.answer();
+    call.on('stream', function(remoteStream){
+      showSpinner('join-spinner', false);
+      showRemoteVideo(remoteStream);
+      setStatus('receiver-status','success','✓ Flux reçu — streaming en cours.');
+      setHeaderStatus('Connecté', 'success');
+      document.getElementById('leave-btn').style.display = 'inline-flex';
+      /* PiP disponible ? */
+      if(document.pictureInPictureEnabled){
+        document.getElementById('pip-btn').style.display = 'inline-flex';
+      }
+    });
+    call.on('close', function(){
+      clearRemoteVideo();
+      setStatus('receiver-status','warning','⚠ Flux interrompu.');
+    });
+  });
+
+  peer.on('error', function(err){
+    showSpinner('join-spinner', false);
+    if(err.type === 'peer-unavailable'){
+      setStatus('receiver-status','error','✗ Session introuvable. Vérifiez le code ou attendez que l\'émetteur démarre.');
+    } else {
+      setStatus('receiver-status','error','✗ Erreur : ' + err.type);
     }
-    
-    function copyAnswer() {
-      copyText($('manual-answer').textContent);
-    }
-    
-    // ==================== MODE IP ====================
-    function detectIP() {
-      // Utiliser une API pour détecter l'IP (pour info uniquement)
-      fetch('https://api.ipify.org?format=json')
-        .then(r => r.json())
-        .then(data => {
-          $('my-ip').textContent = data.ip + ' (Publique)';
-        })
-        .catch(() => {
-          $('my-ip').textContent = '192.168.x.x (Locale)';
-        });
-    }
-    
-    detectIP();
-    
-    function connectByIP() {
-      const ip = $('target-ip').value;
-      if (!ip) return alert('Entrez une IP !');
-      $('ip-status').innerHTML = `<div class="alert alert-info">Connexion à ${ip}... (En développement)</div>`;
-    }
-  </script>
+  });
+}
+
+function showRemoteVideo(stream){
+  var vid = document.getElementById('remote-video');
+  vid.srcObject = stream;
+  document.getElementById('remote-placeholder').style.display = 'none';
+}
+
+function clearRemoteVideo(){
+  var vid = document.getElementById('remote-video');
+  vid.srcObject = null;
+  document.getElementById('remote-placeholder').style.display = 'flex';
+  document.getElementById('leave-btn').style.display = 'none';
+  document.getElementById('pip-btn').style.display  = 'none';
+}
+
+function leaveSession(){
+  destroyPeer();
+  clearRemoteVideo();
+  setStatus('receiver-status','idle','⬤  Connexion fermée.');
+  setHeaderStatus('Prêt', 'idle');
+}
+
+/* ─── Arrêter l'émission ─── */
+function stopSession(){
+  if(localStream){
+    localStream.getTracks().forEach(function(t){ t.stop(); });
+    localStream = null;
+  }
+  destroyPeer();
+
+  var vid = document.getElementById('local-video');
+  vid.srcObject = null;
+  document.getElementById('local-placeholder').style.display  = 'flex';
+  document.getElementById('local-preview-card').style.display = 'none';
+  document.getElementById('peers-card').style.display         = 'none';
+
+  document.getElementById('start-btn').style.display = 'inline-flex';
+  document.getElementById('stop-btn').style.display  = 'none';
+
+  setStatus('sender-status','idle','⬤  Partage arrêté.');
+  setHeaderStatus('Prêt', 'idle');
+  clearPeerList();
+}
+
+function destroyPeer(){
+  if(peer){ try{ peer.destroy(); }catch(e){} peer = null; }
+  activeConns = {};
+}
+
+/* ─── Peers UI ─── */
+function addPeerItem(id){
+  var list = document.getElementById('peer-list');
+  if(document.getElementById('peer-'+id)) return;
+  var d = document.createElement('div');
+  d.className = 'peer-item';
+  d.id = 'peer-'+id;
+  d.innerHTML = '<div class="peer-dot"></div><span class="peer-name">📱 Appareil connecté</span><span class="peer-action" onclick="kickPeer(\''+id+'\')">Déconnecter</span>';
+  list.innerHTML = '';
+  list.appendChild(d);
+}
+
+function removePeerItem(id){
+  var el = document.getElementById('peer-'+id);
+  if(el) el.remove();
+  if(!document.querySelector('.peer-item')){
+    document.getElementById('peer-list').innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Aucun appareil connecté.</p>';
+  }
+}
+
+function kickPeer(id){
+  if(activeConns[id]){ try{ activeConns[id].close(); }catch(e){} delete activeConns[id]; }
+  removePeerItem(id);
+}
+
+function clearPeerList(){
+  document.getElementById('peer-list').innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Aucun appareil connecté.</p>';
+}
+
+/* ─── Miroir ─── */
+function toggleMirror(){
+  mirrored = !mirrored;
+  document.getElementById('local-video').style.transform = mirrored ? 'scaleX(-1)' : '';
+}
+
+function toggleRemoteMirror(){
+  remoteMirrored = !remoteMirrored;
+  document.getElementById('remote-video').style.transform = remoteMirrored ? 'scaleX(-1)' : '';
+}
+
+/* ─── PiP ─── */
+function togglePiP(){
+  var vid = document.getElementById('remote-video');
+  if(document.pictureInPictureElement){ document.exitPictureInPicture(); }
+  else if(vid.srcObject){ vid.requestPictureInPicture().catch(function(e){ alert('PiP non disponible : '+e.message); }); }
+}
+
+/* ─── Plein écran ─── */
+function goFullscreen(videoId){
+  var vid = document.getElementById(videoId);
+  var ov  = document.getElementById('fullscreen-overlay');
+  var fv  = document.getElementById('fullscreen-video');
+
+  if(vid.srcObject){
+    fv.srcObject = vid.srcObject;
+    ov.style.display = 'flex';
+    if(ov.requestFullscreen){ ov.requestFullscreen(); }
+    else if(ov.webkitRequestFullscreen){ ov.webkitRequestFullscreen(); }
+  } else {
+    alert('Aucun flux vidéo actif.');
+  }
+}
+
+function exitFullscreen(){
+  var ov = document.getElementById('fullscreen-overlay');
+  ov.style.display = 'none';
+  var fv = document.getElementById('fullscreen-video');
+  fv.srcObject = null;
+  if(document.exitFullscreen){ document.exitFullscreen().catch(function(){}); }
+  else if(document.webkitExitFullscreen){ document.webkitExitFullscreen(); }
+}
+
+document.addEventListener('fullscreenchange', function(){
+  if(!document.fullscreenElement) exitFullscreen();
+});
+
+/* ─── Spinner ─── */
+function showSpinner(id, show){
+  var el = document.getElementById(id);
+  if(el) el.style.display = show ? 'block' : 'none';
+}
+
+/* ─── Status ─── */
+function setStatus(id, type, msg){
+  var el = document.getElementById(id);
+  if(!el) return;
+  el.className = 'status-bar ' + type;
+  el.textContent = msg;
+}
+
+function setHeaderStatus(label, type){
+  var el = document.getElementById('header-status');
+  if(!el) return;
+  var map = { success: '#10b981', idle: '#94a3b8', error: '#ef4444', info: '#06b6d4', warning: '#f59e0b' };
+  el.textContent = label;
+  el.style.color  = map[type] || '#94a3b8';
+  el.style.borderColor = (map[type] || '#94a3b8') + '55';
+  el.style.background  = (map[type] || '#94a3b8') + '22';
+}
+
+function setGlobalStatus(msg, type){
+  setStatus('sender-status',   type||'error', msg);
+  setStatus('receiver-status', type||'error', msg);
+}
+
+/* ─── Enter key pour rejoindre ─── */
+document.addEventListener('DOMContentLoaded', function(){
+  var jc = document.getElementById('join-code');
+  if(jc) jc.addEventListener('keydown', function(e){ if(e.key==='Enter') joinSession(); });
+  var ri = document.getElementById('room-input');
+  if(ri) ri.addEventListener('keydown', function(e){ if(e.key==='Enter') startSession(); });
+});
+</script>
+
 </body>
 </html>
