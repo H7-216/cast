@@ -8,6 +8,7 @@
     <title>VisioConnect HD - Appel Vidéo P2P</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         * {
             margin: 0;
@@ -422,6 +423,15 @@
             opacity: 1;
         }
 
+        .control-btn i {
+            font-size: 1.4rem;
+            line-height: 1;
+        }
+
+        .btn i {
+            font-size: 1rem;
+        }
+
         /* Status bar */
         .status-bar {
             position: absolute;
@@ -572,7 +582,7 @@
     <div class="container">
         <!-- Écran d'accueil -->
         <div class="home-screen" id="homeScreen">
-            <div class="logo">📹 VisioConnect HD</div>
+            <div class="logo"><i class="fa-solid fa-video" style="font-size:2.5rem; background:linear-gradient(45deg,var(--accent),var(--primary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;"></i> VisioConnect HD</div>
             <div class="subtitle">Communication vidéo P2P chiffrée - Partagez via code ou QR code</div>
             
             <div class="action-buttons">
@@ -599,14 +609,14 @@
         <!-- Modal Créer -->
         <div class="modal" id="createModal">
             <div class="modal-content">
-                <h2 class="modal-title">📞 Créer une session</h2>
+                <h2 class="modal-title"><i class="fa-solid fa-phone"></i> Créer une session</h2>
                 <p>Votre code de session :</p>
                 <div class="code-display" id="sessionCode">----</div>
                 <div id="qrcode"></div>
                 <p style="margin-top: 1rem; color: var(--muted); font-size: 0.9rem;">
                     Partagez ce code ou le QR code avec votre correspondant
                 </p>
-                <button class="btn btn-success" onclick="startCall()">🚀 Démarrer l'appel</button>
+                <button class="btn btn-success" onclick="startCall()"><i class="fa-solid fa-rocket"></i> Démarrer l'appel</button>
                 <button class="btn btn-secondary" onclick="closeModal('createModal')">Annuler</button>
             </div>
         </div>
@@ -614,15 +624,15 @@
         <!-- Modal Rejoindre -->
         <div class="modal" id="joinModal">
             <div class="modal-content">
-                <h2 class="modal-title">📲 Rejoindre une session</h2>
+                <h2 class="modal-title"><i class="fa-solid fa-mobile-screen-button"></i> Rejoindre une session</h2>
                 <div class="input-group">
                     <input type="text" id="joinCode" placeholder="Code de session" maxlength="30">
                 </div>
-                <button class="btn btn-primary" onclick="startScan()">📷 Scanner QR code</button>
+                <button class="btn btn-primary" onclick="startScan()"><i class="fa-solid fa-camera"></i> Scanner QR code</button>
                 <video id="video-scan" playsinline></video>
                 <canvas id="canvas-scan" style="display:none;"></canvas>
                 <br>
-                <button class="btn btn-success" onclick="joinCall()">✅ Rejoindre</button>
+                <button class="btn btn-success" onclick="joinCall()"><i class="fa-solid fa-check"></i> Rejoindre</button>
                 <button class="btn btn-secondary" onclick="closeModal('joinModal')">Annuler</button>
             </div>
         </div>
@@ -650,27 +660,27 @@
 
             <div class="controls">
                 <button class="control-btn" id="micBtn" onclick="toggleMic()" title="Microphone">
-                    🎤
+                    <i class="fa-solid fa-microphone"></i>
                     <span class="tooltip">Micro</span>
                 </button>
                 
                 <button class="control-btn" id="camBtn" onclick="toggleCam()" title="Caméra">
-                    📹
+                    <i class="fa-solid fa-video"></i>
                     <span class="tooltip">Caméra</span>
                 </button>
                 
                 <button class="control-btn" onclick="toggleMirror()" title="Miroir">
-                    🪞
+                    <i class="fa-solid fa-left-right"></i>
                     <span class="tooltip">Miroir</span>
                 </button>
                 
                 <button class="control-btn" onclick="flipCamera()" title="Retourner caméra">
-                    🔄
+                    <i class="fa-solid fa-camera-rotate"></i>
                     <span class="tooltip">Retourner</span>
                 </button>
                 
                 <button class="control-btn danger" onclick="endCall()" title="Raccrocher">
-                    📵
+                    <i class="fa-solid fa-phone-slash"></i>
                     <span class="tooltip">Raccrocher</span>
                 </button>
             </div>
@@ -1148,7 +1158,7 @@
                     audioTrack.enabled = !audioTrack.enabled;
                     micEnabled = audioTrack.enabled;
                     const btn = document.getElementById('micBtn');
-                    btn.innerHTML = micEnabled ? '🎤<span class="tooltip">Micro</span>' : '🎤❌<span class="tooltip">Micro coupé</span>';
+                    btn.innerHTML = micEnabled ? '<i class="fa-solid fa-microphone"></i><span class="tooltip">Micro</span>' : '<i class="fa-solid fa-microphone-slash"></i><span class="tooltip">Micro coupé</span>';
                     btn.classList.toggle('active', !micEnabled);
                     showNotification(micEnabled ? 'Micro activé' : 'Micro coupé');
                 }
@@ -1162,7 +1172,7 @@
                     videoTrack.enabled = !videoTrack.enabled;
                     camEnabled = videoTrack.enabled;
                     const btn = document.getElementById('camBtn');
-                    btn.innerHTML = camEnabled ? '📹<span class="tooltip">Caméra</span>' : '📹❌<span class="tooltip">Caméra éteinte</span>';
+                    btn.innerHTML = camEnabled ? '<i class="fa-solid fa-video"></i><span class="tooltip">Caméra</span>' : '<i class="fa-solid fa-video-slash"></i><span class="tooltip">Caméra éteinte</span>';
                     btn.classList.toggle('active', !camEnabled);
                     showNotification(camEnabled ? 'Caméra activée' : 'Caméra éteinte');
                 }
