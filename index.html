@@ -13,7 +13,29 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* secours : si GSAP ne se charge pas, les animations sont appliquées instantanément */
+if (!window.gsap) (function () {
+  const special = { duration: 1, ease: 1, delay: 1, stagger: 1, onComplete: 1, yoyo: 1, repeat: 1, clearProps: 1, overwrite: 1 };
+  const list = t => typeof t === 'string' ? [...document.querySelectorAll(t)] : Array.isArray(t) ? t.flatMap(list) : (t && typeof t.length === 'number' && !(t instanceof Element)) ? [...t] : t ? [t] : [];
+  const apply = (v, t) => list(t).forEach(el => {
+    if (el instanceof Element) {
+      if (v.clearProps === 'all') { el.style.opacity = ''; el.style.visibility = ''; el.style.transform = ''; return; }
+      if ('autoAlpha' in v) { el.style.opacity = v.autoAlpha; el.style.visibility = v.autoAlpha === 0 ? 'hidden' : ''; }
+      if ('opacity' in v) el.style.opacity = v.opacity;
+      if ('x' in v || 'y' in v || 'scale' in v) { const x = v.x ?? el._x ?? 0, y = v.y ?? el._y ?? 0; el._x = x; el._y = y; el.style.transform = `translate(${x}px, ${y}px)`; }
+    } else for (const k in v) if (!special[k]) el[k] = v[k];
+  });
+  const done = v => { if (v.onComplete) setTimeout(v.onComplete, 0); };
+  window.gsap = {
+    to(t, v) { apply(v, t); done(v); }, fromTo(t, f, v) { apply(v, t); done(v); }, from() { }, set(t, v) { apply(v, t); },
+    killTweensOf() { }, delayedCall(sec, fn) { setTimeout(fn, sec * 1000); },
+    timeline() { const tl = { from: () => tl, to: () => tl, fromTo: () => tl, add: f => { if (typeof f === 'function') f(); return tl; } }; return tl; }
+  };
+})();
+/* sans fond 3D (WebGL ou Three.js indisponible) : dégradé de secours */
+window.addEventListener('load', () => setTimeout(() => { if (!window.__vcScene) { document.body.classList.add('no-gl'); const c = document.getElementById('gl'); if (c) c.hidden = true; } }, 5000));
+</script>
 <script type="importmap">
 {
 "imports": {
@@ -189,6 +211,27 @@ padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;background:rgb
 .pip{width:114px;height:172px;border-radius:18px}
 .inv-code{font-size:24px}
 }
+.namebox{display:flex;align-items:center;gap:2px;height:56px;width:100%;max-width:462px;padding:5px 8px 5px 18px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);
+backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:border-color .2s,background .2s;margin-top:4px;cursor:text}
+.namebox:focus-within{border-color:rgba(31,210,122,.55);background:rgba(255,255,255,.08)}
+.namebox.bad{border-color:rgba(255,59,71,.75);background:rgba(255,59,71,.08)}
+.namebox svg{width:20px;height:20px;color:var(--ink-2)}
+.namebox span{font-size:13px;font-weight:600;color:var(--ink-3);white-space:nowrap;padding-left:8px}
+.namebox input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--ink);font:600 15.5px 'Manrope',sans-serif;padding:0 10px}
+.namebox input::placeholder{color:var(--ink-3);font-weight:500}
+.tile .mic-badge{display:none!important}
+.who{position:absolute;z-index:4;left:10px;bottom:10px;display:inline-flex;align-items:center;gap:7px;max-width:calc(100% - 20px);padding:6px 12px;border-radius:999px;
+font-size:12.5px;font-weight:700;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.who b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.who svg{width:15px;height:15px;display:none;color:#ff6b74;stroke-width:2.2}
+.tile.mic-off .who svg{display:block}
+.stage .who{left:20px;bottom:calc(118px + env(safe-area-inset-bottom,0px));font-size:14.5px;padding:8px 15px}
+.pip .who{left:8px;bottom:8px;font-size:11px;padding:4px 9px;gap:5px}
+.pip .who svg{width:12px;height:12px}
+.ct-code{font-size:11.5px;color:var(--ink-3);letter-spacing:.14em}
+.unlock{position:absolute;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%)}
+@media (max-width:820px){.namebox{max-width:none;margin-top:0}.hero{gap:14px}.lede{font-size:14.5px;line-height:1.55}}
+@media (max-width:600px){.stage .who{left:14px;bottom:calc(100px + env(safe-area-inset-bottom,0px));font-size:13px}}
 </style>
 </head>
 <body>
@@ -207,6 +250,7 @@ padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;background:rgb
 <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3.5v11"/><path d="M7.8 7.4 12 3.2l4.2 4.2"/><path d="M8 11H6.5a2 2 0 0 0-2 2v5.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V13a2 2 0 0 0-2-2H16"/></symbol>
 <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.6"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1.6"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1.6"/><path d="M14 14h2.5v2.5M20.5 14v.01M14 20.5h.01M17.5 18.5v2h3V17"/></symbol>
 <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6.5 8.6H3.8a.8.8 0 0 0-.8.8v5.2c0 .44.36.8.8.8h2.7L11 19z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path d="M18.4 6.5a8 8 0 0 1 0 11"/></symbol>
 <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
 </svg>
 <canvas id="gl" aria-hidden="true"></canvas>
@@ -225,7 +269,8 @@ VisioConnect <span class="tag">P2P</span>
 <span class="l"><span>Face à face,</span></span>
 <span class="l grad"><span>où que vous soyez.</span></span>
 </h1>
-<p class="lede">Des appels vidéo HD directement entre deux appareils. Créez une session, partagez le code ou le QR, et c'est parti.</p>
+<p class="lede">Des appels vidéo HD directement entre deux appareils. Écrivez votre nom, créez une session, partagez le code ou le QR, et c'est parti.</p>
+<label class="namebox" for="myName"><svg class="i"><use href="#i-user"/></svg><input id="myName" maxlength="30" placeholder="Votre nom (ex. Rayan)" autocomplete="name" enterkeyhint="go" aria-label="Votre nom"></label>
 <div class="actions">
 <button id="btnCreate" class="btn btn-primary"><svg class="i"><use href="#i-video"/></svg>Nouvel appel</button>
 <form id="joinForm" class="join" autocomplete="off">
@@ -262,13 +307,15 @@ VisioConnect <span class="tag">P2P</span>
 <video autoplay playsinline muted></video>
 <div class="tile-off"><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div><span></span></div>
 <div class="mic-badge"><svg class="i"><use href="#i-mic-off"/></svg></div>
+<div class="who" hidden><svg class="i"><use href="#i-mic-off"/></svg><b></b></div>
 </div>
 <div class="shade top"></div>
 <div class="shade bottom"></div>
 <header class="call-top">
 <div class="ct-title" id="ctTitle">---</div>
+<div class="ct-code" id="ctCode" hidden></div>
 <div class="ct-sub"><svg class="i"><use href="#i-lock"/></svg><span id="ctStatus"></span></div>
-<div class="chip" id="remoteMicChip" hidden><svg class="i"><use href="#i-mic-off"/></svg>Micro du correspondant coupé</div>
+<div class="chip" id="remoteMicChip" hidden><svg class="i"><use href="#i-mic-off"/></svg><span id="remoteMicText">Micro du correspondant coupé</span></div>
 </header>
 <div id="invite" class="invite glass" hidden>
 <p class="inv-eyebrow">Invitez votre correspondant</p>
@@ -284,6 +331,7 @@ VisioConnect <span class="tag">P2P</span>
 <video autoplay playsinline muted></video>
 <div class="tile-off"><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div><span></span></div>
 <div class="mic-badge"><svg class="i"><use href="#i-mic-off"/></svg></div>
+<div class="who" hidden><svg class="i"><use href="#i-mic-off"/></svg><b></b></div>
 </div>
 <nav class="call-bottom">
 <div class="bar glass">
@@ -299,6 +347,7 @@ VisioConnect <span class="tag">P2P</span>
 </div>
 </nav>
 <audio id="remoteAudio" autoplay playsinline></audio>
+<button id="unlockSound" class="btn btn-primary unlock" hidden><svg class="i"><use href="#i-sound"/></svg>Touchez pour activer le son</button>
 <div id="ended" class="ended" hidden>
 <p class="ended-title" id="endedReason">Appel terminé</p>
 <p class="ended-time mono" id="endedTime"></p>
@@ -558,732 +607,947 @@ gsap.to([orbU.uIntro, dustU.uIntro], { value: 1, duration: reduceMotion ? 0.6 : 
 pulse(on) { gsap.to(orbU.uPulse, { value: on ? 1 : 0, duration: 0.9, ease: 'power2.out' }); }
 };
 }
-let scene;
 try {
-scene = createScene($('#gl'));
+const s = createScene($('#gl'));
+window.__vcScene = s;
+const w = window.__vcWant || { running: true };
+if (w.running !== false) s.start();
+if (w.intro) s.intro();
+if (w.pulse) s.pulse(true);
 } catch (err) {
 console.warn('WebGL indisponible', err);
 document.body.classList.add('no-gl');
 $('#gl').hidden = true;
-scene = { start() {}, stop() {}, intro() {}, pulse() {} };
+}
+</script>
+<script type="module">
+/* =====================================================================
+   VisioConnect — logique d’appel
+   • Mise en relation : messages chiffrés (AES-GCM, clé tirée du code) envoyés
+     par trois relais MQTT publics à la fois (EMQX, HiveMQ, Eclipse).
+   • Image et son : WebRTC direct entre les deux appareils (DTLS-SRTP).
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const scene = {                                   // fond 3D (chargé à part : l’appel marche même sans lui)
+  want: { running: true, intro: false, pulse: false },
+  real() { return window.__vcScene || null; },
+  start() { this.want.running = true; const s = this.real(); s && s.start(); },
+  stop() { this.want.running = false; const s = this.real(); s && s.stop(); },
+  intro() { this.want.intro = true; const s = this.real(); s && s.intro(); },
+  pulse(on) { this.want.pulse = on; const s = this.real(); s && s.pulse(on); }
+};
+window.__vcWant = scene.want;
+
+const enc = s => new TextEncoder().encode(s);
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+const rid = (n = 16) => [...crypto.getRandomValues(new Uint8Array(n))].map(b => (b % 36).toString(36)).join('');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+};
+const Me = { id: rid(16), name: '' };
+
+/* ---------- serveurs STUN / TURN ---------- */
+async function iceServers() {
+  const forced = store.get('vc_ice', null);
+  if (Array.isArray(forced)) return forced;
+  const list = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+  const custom = store.get('vc_turn', null);              // { urls, username, credential } si vous avez votre propre TURN
+  if (custom && custom.urls) list.push(custom);
+  try {   // Open Relay (Metered) : identifiants temporaires calculés avec son secret public « staticauth »
+    const user = (Math.floor(Date.now() / 1000) + 12 * 3600) + ':visioconnect';
+    const k = await crypto.subtle.importKey('raw', enc('openrelayprojectsecret'), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const cred = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.sign('HMAC', k, enc(user)))));
+    list.push({ urls: ['turn:staticauth.openrelay.metered.ca:80', 'turn:staticauth.openrelay.metered.ca:443?transport=tcp', 'turns:staticauth.openrelay.metered.ca:443?transport=tcp'], username: user, credential: cred });
+  } catch (e) { }
+  return list;
 }
 
-const ICE = {
-iceServers: [
-{ urls: 'stun:stun.l.google.com:19302' },
-{ urls: 'stun:stun1.l.google.com:19302' },
-{ urls: 'stun:stun.cloudflare.com:3478' },
-{ urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-{ urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-{ urls: 'turns:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
-]
+/* ---------- mise en relation (signalisation) ---------- */
+const Sig = {
+  CDN: ['https://cdn.jsdelivr.net/npm/mqtt@5.15.2/dist/mqtt.min.js', 'https://unpkg.com/mqtt@5.15.2/dist/mqtt.min.js'],
+  RELAYS: ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://mqtt.eclipseprojects.io:443/mqtt'],
+  clients: [], base: '', key: null, seen: new Set(), seenQ: [], chain: Promise.resolve(), outbox: [], onMsg: null, onUp: null, byeBytes: null,
+  relays() { const c = store.get('vc_relays', null); return Array.isArray(c) && c.length ? c : this.RELAYS; },
+  async lib() {
+    if (window.mqtt) return;
+    for (const url of this.CDN) {
+      try { await new Promise((ok, ko) => { const s = document.createElement('script'); s.src = url; s.onload = ok; s.onerror = ko; document.head.appendChild(s); }); if (window.mqtt) return; } catch (e) { }
+    }
+    throw new Error('Connexion Internet nécessaire pour lancer l’appel.');
+  },
+  async start(code) {
+    this.close();
+    const n = sanitize(code);
+    const raw = await crypto.subtle.importKey('raw', enc('vc-room|' + n), 'PBKDF2', false, ['deriveKey']);
+    this.key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: enc('visioconnect-v3'), iterations: 60000, hash: 'SHA-256' }, raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    this.base = 'visioconnect/v3/' + hex(await crypto.subtle.digest('SHA-256', enc('vc-topic|' + n))).slice(0, 32);
+    await this.lib();
+    const will = await this.seal(this.msg('bye', { reason: 'lost' }));
+    this.byeBytes = await this.seal(this.msg('bye', { reason: 'leave' }));
+    for (const url of this.relays()) {
+      const e = { url, c: null, up: false };
+      this.clients.push(e);
+      try { e.c = mqtt.connect(url, { clientId: 'vc_' + rid(14), keepalive: 20, reconnectPeriod: 3000, connectTimeout: 10000, clean: true, protocolVersion: 4, will: { topic: this.base + '/all', payload: will, qos: 0, retain: false } }); }
+      catch (x) { continue; }
+      e.c.on('connect', () => {
+        e.c.subscribe([this.base + '/all', this.base + '/to/' + Me.id], { qos: 1 }, err => {
+          if (err) return;
+          e.up = true;
+          this.outbox.splice(0).forEach(b => this.publish(b.topic, b.bytes, b.qos));
+          this.onUp && this.onUp();
+        });
+      });
+      const down = () => { e.up = false; };
+      e.c.on('close', down); e.c.on('offline', down);
+      e.c.on('message', (topic, payload) => this.receive(payload));
+    }
+  },
+  anyUp() { return this.clients.some(c => c.up); },
+  msg(type, data = {}, to = null) { return { mid: rid(12), from: Me.id, name: Me.name, role: state.role, type, ...(to ? { to } : {}), ...data }; },
+  async seal(obj) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, this.key, enc(JSON.stringify(obj))));
+    const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return out;
+  },
+  async receive(payload) {
+    const bytes = payload instanceof Uint8Array ? payload : new Uint8Array(payload || []);
+    if (bytes.length < 20 || !this.key) return;
+    let m; try { m = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes.slice(0, 12) }, this.key, bytes.slice(12)))); } catch (e) { return; }
+    if (!m || !m.mid || !m.from || m.from === Me.id || (m.to && m.to !== Me.id) || this.seen.has(m.mid)) return;
+    this.seen.add(m.mid); this.seenQ.push(m.mid); if (this.seenQ.length > 2000) this.seen.delete(this.seenQ.shift());
+    this.onMsg && this.onMsg(m);
+  },
+  send(type, data = {}, to = null, qos = 1) {           // envoi dans l’ordre (le chiffrement est asynchrone)
+    const m = this.msg(type, data, to), key = this.key, base = this.base;
+    this.chain = this.chain.then(async () => {
+      if (!this.key || this.key !== key) return;
+      this.publish(base + (to ? '/to/' + to : '/all'), await this.seal(m), qos);
+    }).catch(() => { });
+  },
+  publish(topic, bytes, qos) {
+    const up = this.clients.filter(c => c.up);
+    if (!up.length) { this.outbox.push({ topic, bytes, qos }); if (this.outbox.length > 200) this.outbox.shift(); return; }
+    for (const c of up) { try { c.c.publish(topic, bytes, { qos }); } catch (e) { } }
+  },
+  byeNow() { if (!this.byeBytes) return; for (const c of this.clients.filter(x => x.up)) { try { c.c.publish(this.base + '/all', this.byeBytes, { qos: 0 }); } catch (e) { } } },
+  close() {
+    for (const c of this.clients) { try { c.c && c.c.end(false); } catch (e) { } }
+    this.clients = []; this.outbox = []; this.key = null; this.byeBytes = null; this.chain = Promise.resolve();
+  }
 };
-const PEER_OPTS = { host: '0.peerjs.com', port: 443, path: '/', secure: true, config: ICE, debug: 1 };
+
+/* ---------- état ---------- */
 function freshState() {
-return {
-active: false, ending: false, role: null, code: null,
-peer: null, call: null, conn: null,
-localStream: null, remoteStream: null, connected: false,
-mic: true, cam: true, facing: 'user', mirror: true, swapped: false,
-remote: { mic: true, cam: true },
-seconds: 0, timer: null, unstable: false, joinTimeout: null, wakeLock: null
-};
+  return {
+    active: false, ending: false, role: null, code: null,
+    pc: null, peerId: null, initiator: false, restarts: 0, offerAt: 0, earlyIce: [],
+    localStream: null, remoteStream: null, connected: false,
+    mic: true, cam: true, facing: 'user', mirror: true, swapped: false,
+    remote: { mic: true, cam: true, name: '' },
+    seconds: 0, timer: null, unstable: false, joinTimeout: null, wakeLock: null, helloT: null, relayT: null, failT: null
+  };
 }
 const state = Object.assign(freshState(), { token: 0 });
+Object.defineProperty(window, '__vc', { get: () => state });   // diagnostic (console du navigateur)
 let callVisible = false;
 
 const sanitize = (c) => String(c).replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 24);
-const peerIdFor = (code) => 'visio-' + sanitize(code);
 const formatCode = (clean) => clean.length === 9 ? `${clean.slice(0, 3)}-${clean.slice(3, 6)}-${clean.slice(6)}` : clean;
 const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const remoteName = () => state.remote.name || 'Votre correspondant';
 function generateCode() {
-const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-const rnd = new Uint32Array(9);
-crypto.getRandomValues(rnd);
-let s = '';
-for (let i = 0; i < 9; i++) s += chars[rnd[i] % chars.length];
-return formatCode(s);
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const rnd = new Uint32Array(9);
+  crypto.getRandomValues(rnd);
+  let s = '';
+  for (let i = 0; i < 9; i++) s += chars[rnd[i] % chars.length];
+  return formatCode(s);
 }
 let toastT;
 function toast(msg, err = false) {
-const t = $('#toast');
-t.textContent = msg;
-t.classList.toggle('err', err);
-gsap.killTweensOf(t);
-gsap.fromTo(t, { y: -18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.45, ease: 'power3.out' });
-clearTimeout(toastT);
-toastT = setTimeout(() => gsap.to(t, { y: -18, autoAlpha: 0, duration: 0.35, ease: 'power2.in' }), 2900);
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('err', err);
+  gsap.killTweensOf(t);
+  gsap.fromTo(t, { y: -18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.45, ease: 'power3.out' });
+  clearTimeout(toastT);
+  toastT = setTimeout(() => gsap.to(t, { y: -18, autoAlpha: 0, duration: 0.35, ease: 'power2.in' }), err ? 4800 : 2900);
 }
 function showLoader(text) {
-$('#loaderText').textContent = text;
-const l = $('#loader');
-if (!l.hidden) return;
-l.hidden = false;
-gsap.fromTo(l, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 });
+  $('#loaderText').textContent = text;
+  const l = $('#loader');
+  if (!l.hidden) return;
+  l.hidden = false;
+  gsap.fromTo(l, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 });
 }
 function hideLoader() {
-const l = $('#loader');
-if (l.hidden) return;
-gsap.to(l, { autoAlpha: 0, duration: 0.25, onComplete: () => { l.hidden = true; gsap.set(l, { clearProps: 'all' }); } });
+  const l = $('#loader');
+  if (l.hidden) return;
+  gsap.to(l, { autoAlpha: 0, duration: 0.25, onComplete: () => { l.hidden = true; gsap.set(l, { clearProps: 'all' }); } });
 }
 function mediaError(e) {
-const n = (e && e.name) || '';
-if (n === 'NotAllowedError' || n === 'SecurityError') return 'Accès caméra/micro refusé. Autorisez-le dans le navigateur.';
-if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'Aucune caméra ou micro détecté.';
-if (n === 'NotReadableError') return 'La caméra est déjà utilisée par une autre application.';
-return 'Erreur caméra : ' + ((e && e.message) || n);
+  const n = (e && e.name) || '';
+  if (n === 'NotAllowedError' || n === 'SecurityError') return 'Accès caméra/micro refusé. Autorisez-le dans le navigateur.';
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'Aucune caméra ou micro détecté.';
+  if (n === 'NotReadableError') return 'La caméra est déjà utilisée par une autre application.';
+  return 'Erreur caméra : ' + ((e && e.message) || n);
 }
+const AUDIO = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
 async function getMedia(facing) {
-const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
-try {
-return await navigator.mediaDevices.getUserMedia({
-video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 30 } },
-audio
-});
-} catch (e) {
-if (e.name === 'OverconstrainedError') return navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-if (e.name === 'NotFoundError') return navigator.mediaDevices.getUserMedia({ video: false, audio });
-throw e;
-}
+  try {
+    return await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }, audio: AUDIO });
+  } catch (e) {
+    if (e.name === 'OverconstrainedError') return navigator.mediaDevices.getUserMedia({ video: true, audio: AUDIO });
+    if (e.name === 'NotFoundError' || e.name === 'NotReadableError') {
+      try { return await navigator.mediaDevices.getUserMedia({ video: false, audio: AUDIO }); }   // micro seul
+      catch (e2) { return navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }  // caméra seule
+    }
+    throw e;
+  }
 }
 async function acquireMedia(tok) {
-if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-state.active = false;
-toast('La caméra nécessite une page en HTTPS ou sur localhost.', true);
-return null;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    state.active = false;
+    toast('La caméra nécessite une page en HTTPS, sur localhost ou ouverte en fichier local.', true);
+    return null;
+  }
+  showLoader('Autorisez la caméra et le micro');
+  scene.pulse(true);
+  try {
+    const s = await getMedia('user');
+    if (tok !== state.token) { s.getTracks().forEach((t) => t.stop()); return null; }
+    if (!s.getVideoTracks().length) state.cam = false;
+    if (!s.getAudioTracks().length) { state.mic = false; toast('Micro introuvable : l’autre personne ne vous entendra pas.', true); }
+    hideLoader();
+    return s;
+  } catch (e) {
+    if (tok !== state.token) return null;
+    hideLoader();
+    scene.pulse(false);
+    state.active = false;
+    toast(mediaError(e), true);
+    return null;
+  }
 }
-showLoader('Autorisez la caméra et le micro');
-scene.pulse(true);
-try {
-const s = await getMedia('user');
-if (tok !== state.token) { s.getTracks().forEach((t) => t.stop()); return null; }
-if (!s.getVideoTracks().length) state.cam = false;
-hideLoader();
-return s;
-} catch (e) {
-if (tok !== state.token) return null;
-hideLoader();
-scene.pulse(false);
-state.active = false;
-toast(mediaError(e), true);
-return null;
-}
+function askName() {
+  const i = $('#myName'), name = i.value.trim().replace(/\s+/g, ' ');
+  if (name.length < 2) {
+    gsap.fromTo('.namebox', { x: -10 }, { x: 0, duration: 0.6, ease: 'elastic.out(1, 0.3)' });
+    $('.namebox').classList.add('bad'); i.focus();
+    toast('Écrivez votre nom pour que l’autre personne sache qui vous êtes.', true);
+    return null;
+  }
+  Me.name = name.slice(0, 30); store.set('vc_name', Me.name);
+  return Me.name;
 }
 
+/* ---------- créer / rejoindre ---------- */
 async function startCreate() {
-if (state.active) return;
-state.active = true;
-state.role = 'host';
-const tok = ++state.token;
-const stream = await acquireMedia(tok);
-if (!stream) return;
-state.localStream = stream;
-openHostPeer(0, tok);
-}
-function openHostPeer(attempt, tok) {
-state.code = generateCode();
-const peer = new Peer(peerIdFor(state.code), PEER_OPTS);
-state.peer = peer;
-peer.on('open', () => { if (tok === state.token) enterCall('waiting'); });
-peer.on('connection', (conn) => {
-if (tok !== state.token) return;
-if (state.connected) {
-conn.on('open', () => { try { conn.send({ type: 'busy' }); } catch {} setTimeout(() => conn.close(), 400); });
-return;
-}
-bindConn(conn);
-});
-peer.on('call', (call) => {
-if (tok !== state.token) return;
-if (state.connected) { call.close(); return; }
-if (state.call) { try { state.call.close(); } catch {} }
-call.answer(state.localStream);
-bindCall(call);
-});
-peer.on('error', (err) => {
-if (tok !== state.token) return;
-if (err.type === 'unavailable-id' && attempt < 4) { peer.destroy(); openHostPeer(attempt + 1, tok); return; }
-onPeerError(err);
-});
-peer.on('disconnected', () => {
-if (tok === state.token && !state.ending && !peer.destroyed) { try { peer.reconnect(); } catch {} }
-});
+  if (state.active || !askName()) return;
+  state.active = true;
+  state.role = 'host';
+  const tok = ++state.token;
+  const stream = await acquireMedia(tok);
+  if (!stream) return;
+  state.localStream = stream;
+  state.code = generateCode();
+  enterCall('waiting');
+  connectSignal(tok);
 }
 async function startJoin(raw) {
-const clean = sanitize(raw || '');
-if (clean.length < 6) {
-gsap.fromTo('.join', { x: -10 }, { x: 0, duration: 0.6, ease: 'elastic.out(1, 0.3)' });
-toast('Entrez un code valide (ex. abc-def-ghj)', true);
-return;
+  const clean = sanitize(raw || '');
+  if (clean.length < 6) {
+    gsap.fromTo('.join', { x: -10 }, { x: 0, duration: 0.6, ease: 'elastic.out(1, 0.3)' });
+    toast('Entrez un code valide (ex. abc-def-ghj)', true);
+    return;
+  }
+  if (state.active || !askName()) return;
+  state.active = true;
+  state.role = 'guest';
+  const tok = ++state.token;
+  const stream = await acquireMedia(tok);
+  if (!stream) return;
+  state.localStream = stream;
+  state.code = formatCode(clean);
+  enterCall('connecting');
+  connectSignal(tok);
+  state.joinTimeout = setTimeout(() => {
+    if (tok === state.token && !state.connected) finish(state.pc ? 'Connexion impossible : le réseau bloque l’appel. Essayez en 4G.' : 'Aucune réponse. Vérifiez le code et que l’appel a bien été créé.', true);
+  }, 35000);
 }
-if (state.active) return;
-state.active = true;
-state.role = 'guest';
-const tok = ++state.token;
-const stream = await acquireMedia(tok);
-if (!stream) return;
-state.localStream = stream;
-state.code = formatCode(clean);
-enterCall('connecting');
-const target = peerIdFor(clean);
-const peer = new Peer(PEER_OPTS);
-state.peer = peer;
-peer.on('open', () => {
-if (tok !== state.token) return;
-bindConn(peer.connect(target, { reliable: true }));
-const call = peer.call(target, state.localStream);
-if (call) bindCall(call);
-});
-peer.on('error', (err) => { if (tok === state.token) onPeerError(err); });
-peer.on('disconnected', () => {
-if (tok === state.token && !state.ending && !peer.destroyed) { try { peer.reconnect(); } catch {} }
-});
-state.joinTimeout = setTimeout(() => {
-if (tok === state.token && !state.connected) finish('Aucune réponse. Vérifiez le code.', true);
-}, 25000);
+async function connectSignal(tok) {
+  try {
+    state.ice = await iceServers();
+    Sig.onMsg = m => { if (tok === state.token) onSignal(m).catch(e => console.warn('signal', m.type, e)); };
+    Sig.onUp = () => { if (tok === state.token) hello(); };
+    await Sig.start(state.code);
+    if (tok !== state.token) { Sig.close(); return; }
+  } catch (e) { if (tok === state.token) finish(e.message || 'Connexion impossible.', true); return; }
+  state.helloT = setInterval(() => { if (tok === state.token) hello(); }, 4000);
+  state.relayT = setTimeout(() => {
+    if (tok === state.token && !Sig.anyUp()) toast('Serveur de mise en relation injoignable. Le Wi-Fi bloque peut-être : essayez en 4G.', true);
+  }, 12000);
 }
-function bindCall(call) {
-state.call = call;
-const tok = state.token;
-call.on('stream', (stream) => {
-if (tok !== state.token) return;
-state.remoteStream = stream;
-const a = $('#remoteAudio');
-if (a.srcObject !== stream) { a.srcObject = stream; a.play().catch(() => {}); }
-if (!state.connected) onConnected(); else renderFeeds();
-});
-call.on('close', () => {
-if (tok !== state.token) return;
-if (!state.connected) {
-if (state.call === call) state.call = null;
-if (state.role === 'guest') finish('Le correspondant a quitté la session.', true);
-return;
+const myState = () => ({ mic: state.mic && !!(state.localStream && state.localStream.getAudioTracks()[0]), cam: state.cam && !!(state.localStream && state.localStream.getVideoTracks()[0]) });
+function hello() { if (state.active && !state.ending) Sig.send('hello', { state: myState() }, null, 0); }
+
+async function onSignal(m) {
+  const mine = state.peerId && m.from === state.peerId;
+  switch (m.type) {
+    case 'hello':
+    case 'welcome':
+      if (state.peerId && !mine) { if (m.type === 'hello') Sig.send('busy', {}, m.from); return; }   // déjà en appel avec quelqu’un
+      if (m.role === 'guest' && state.role === 'guest') return;                                        // deux invités sans créateur
+      if (mine) {
+        updateRemote(m);
+        if (state.initiator && !state.connected && state.pc && state.pc.signalingState === 'have-local-offer' && Date.now() - state.offerAt > 6000) {
+          state.offerAt = Date.now(); Sig.send('offer', { sdp: { type: 'offer', sdp: state.pc.localDescription.sdp }, state: myState() }, state.peerId);
+        }
+        return;
+      }
+      if (Me.id < m.from) createPeer(m, true);            // le plus petit identifiant lance l’appel
+      else if (m.type === 'hello') Sig.send('welcome', { state: myState() }, m.from);
+      return;
+    case 'offer': {
+      if (state.peerId && !mine) return;
+      if (state.initiator) return;
+      if (!state.pc) createPeer(m, false);
+      updateRemote(m);
+      const pc = state.pc;
+      await pc.setRemoteDescription(m.sdp);
+      for (const t of pc.getTransceivers()) {
+        const kind = t.receiver.track && t.receiver.track.kind; if (!kind) continue;
+        if (t.direction === 'recvonly' || t.direction === 'inactive') t.direction = 'sendrecv';
+        const want = (kind === 'audio' ? state.localStream.getAudioTracks() : state.localStream.getVideoTracks())[0] || null;
+        if (t.sender.track !== want) await t.sender.replaceTrack(want);
+        try { t.sender.setStreams && t.sender.setStreams(state.localStream); } catch (e) { }
+      }
+      await pc.setLocalDescription(await pc.createAnswer());
+      Sig.send('answer', { sdp: { type: 'answer', sdp: pc.localDescription.sdp }, state: myState() }, m.from);
+      flushIce();
+      return;
+    }
+    case 'answer':
+      if (!mine || !state.initiator || !state.pc || state.pc.signalingState !== 'have-local-offer') return;
+      updateRemote(m);
+      await state.pc.setRemoteDescription(m.sdp); flushIce();
+      return;
+    case 'ice':
+      if (!m.c || (state.peerId && !mine)) return;
+      if (!state.pc || !state.pc.remoteDescription) { state.earlyIce.push(m.c); return; }
+      state.pc.addIceCandidate(m.c).catch(() => { });
+      return;
+    case 'restart': if (mine && state.initiator) restartIce(); return;
+    case 'state': if (mine) updateRemote(m); return;
+    case 'bye':
+      if (!mine) return;
+      if (m.reason === 'lost' && state.pc && state.pc.connectionState === 'connected') return;   // simple coupure du relais
+      if (state.connected) endCall('remote');
+      else if (state.role === 'host') { toast(remoteName() + ' est reparti avant la connexion.'); resetPeer(); setStatus('En attente du correspondant…'); }
+      else finish(remoteName() + ' a quitté l’appel.', true);
+      return;
+    case 'busy':
+      if (!state.connected) finish("Cette session est déjà en cours avec quelqu'un.", true);
+      return;
+  }
 }
-endCall('remote');
-});
-call.on('error', (e) => console.warn('Erreur appel', e));
+function updateRemote(m) {
+  let changed = false;
+  if (m.name && m.name !== state.remote.name) { state.remote.name = String(m.name).slice(0, 30); changed = true; }
+  if (m.state) { state.remote.mic = !!m.state.mic; state.remote.cam = !!m.state.cam; changed = true; }
+  if (changed) { renderFeeds(); updateRemoteChip(); updateTitle(); }
 }
-function bindConn(conn) {
-if (state.conn && state.conn !== conn) { try { state.conn.close(); } catch {} }
-state.conn = conn;
-const tok = state.token;
-conn.on('open', () => { if (tok === state.token) sendState(); });
-conn.on('data', (msg) => {
-if (tok !== state.token || !msg || typeof msg !== 'object') return;
-if (msg.type === 'state') {
-state.remote.mic = !!msg.mic;
-state.remote.cam = !!msg.cam;
-renderFeeds();
-updateRemoteChip();
-} else if (msg.type === 'bye') {
-endCall('remote');
-} else if (msg.type === 'busy') {
-finish("Cette session est déjà en cours avec quelqu'un.", true);
+function createPeer(m, initiator) {
+  const pc = new RTCPeerConnection({ iceServers: state.ice || [], bundlePolicy: 'max-bundle' });
+  state.pc = pc; state.peerId = m.from; state.initiator = initiator;
+  state.remoteStream = new MediaStream();
+  updateRemote(m);
+  const tok = state.token;
+  if (initiator) {
+    const a = state.localStream.getAudioTracks()[0], v = state.localStream.getVideoTracks()[0];
+    pc.addTransceiver(a || 'audio', { direction: 'sendrecv', streams: [state.localStream] });
+    pc.addTransceiver(v || 'video', { direction: 'sendrecv', streams: [state.localStream] });
+  }
+  pc.ontrack = (e) => {
+    if (tok !== state.token) return;
+    const s = state.remoteStream;
+    s.getTracks().filter(t => t.kind === e.track.kind && t !== e.track).forEach(t => s.removeTrack(t));
+    if (!s.getTracks().includes(e.track)) s.addTrack(e.track);
+    e.track.onunmute = () => renderFeeds();
+    if (e.track.kind === 'audio') playRemoteAudio();
+    renderFeeds();
+  };
+  pc.onicecandidate = (e) => { if (e.candidate && tok === state.token) Sig.send('ice', { c: e.candidate.toJSON() }, state.peerId); };
+  pc.onconnectionstatechange = () => { if (tok === state.token) onPcState(); };
+  if (initiator) makeOffer(false);
+  setStatus('Connexion avec ' + remoteName() + '…');
 }
-});
-conn.on('close', () => { if (tok === state.token && state.conn === conn) state.conn = null; });
-conn.on('error', (e) => console.warn('Erreur data', e));
+async function makeOffer(iceRestart) {
+  const pc = state.pc; if (!pc) return;
+  try {
+    await pc.setLocalDescription(await pc.createOffer(iceRestart ? { iceRestart: true } : {}));
+    state.offerAt = Date.now();
+    Sig.send('offer', { sdp: { type: 'offer', sdp: pc.localDescription.sdp }, state: myState() }, state.peerId);
+  } catch (e) { console.warn('offre', e); }
 }
-function sendState() {
-if (state.conn && state.conn.open) {
-try { state.conn.send({ type: 'state', mic: state.mic, cam: state.cam }); } catch {}
+function flushIce() { const l = state.earlyIce.splice(0); for (const c of l) state.pc.addIceCandidate(c).catch(() => { }); }
+function onPcState() {
+  const s = state.pc.connectionState;
+  if (s === 'connected') {
+    clearTimeout(state.failT); state.restarts = 0;
+    if (!state.connected) onConnected();
+    else { state.unstable = false; updateTimer(); }
+  } else if (s === 'disconnected') {
+    state.unstable = true; setStatus('Connexion instable…');
+    clearTimeout(state.failT);
+    state.failT = setTimeout(() => { if (state.pc && ['disconnected', 'failed'].includes(state.pc.connectionState)) restartIce(); }, 5000);
+  } else if (s === 'failed') {
+    if (state.connected) restartIce();
+    else if (state.role === 'host') { resetPeer(); setStatus('En attente du correspondant…'); }   // on se tient prêt pour un nouvel essai
+  }
 }
+function resetPeer() {
+  try { state.pc && state.pc.close(); } catch (e) { }
+  state.pc = null; state.peerId = null; state.initiator = false; state.earlyIce = []; state.restarts = 0;
+  state.remoteStream = null; state.remote = { mic: true, cam: true, name: '' };
+  $('#remoteAudio').srcObject = null;
+  renderFeeds();
 }
-function onPeerError(err) {
-console.warn('PeerJS', err.type, err);
-const soft = ['network', 'disconnected', 'socket-error', 'socket-closed', 'server-error'].includes(err.type);
-if (state.connected && soft) return;
-const map = {
-'peer-unavailable': 'Session introuvable. Vérifiez le code.',
-'browser-incompatible': 'Navigateur non compatible WebRTC.',
-'network': 'Serveur de connexion injoignable.',
-'socket-error': 'Serveur de connexion injoignable.',
-'server-error': 'Serveur de connexion indisponible.',
-'unavailable-id': 'Impossible de créer la session, réessayez.'
-};
-finish(map[err.type] || ('Erreur : ' + err.type), true);
+function restartIce() {
+  if (!state.pc) return;
+  if (state.restarts >= 3) { if (state.connected) endCall('failed'); return; }
+  state.restarts++; state.unstable = true; setStatus('Reconnexion…');
+  if (state.initiator) { try { state.pc.restartIce && state.pc.restartIce(); } catch (e) { } makeOffer(true); }
+  else Sig.send('restart', {}, state.peerId);
+}
+/* son du correspondant : élément audio séparé, flux audio seul */
+function playRemoteAudio() {
+  const a = $('#remoteAudio');
+  const track = state.remoteStream && state.remoteStream.getAudioTracks()[0];
+  if (!track) return;
+  if (!a.srcObject || a.srcObject.getAudioTracks()[0] !== track) a.srcObject = new MediaStream([track]);
+  a.muted = false; a.volume = 1;
+  const p = a.play();
+  if (p && p.then) p.then(() => { $('#unlockSound').hidden = true; }).catch(() => { $('#unlockSound').hidden = false; });
 }
 
 function onConnected() {
-state.connected = true;
-clearTimeout(state.joinTimeout);
-const pc = state.call && state.call.peerConnection;
-if (pc) { watchIce(pc); boostQuality(pc); }
-requestWakeLock();
-if (navigator.vibrate) navigator.vibrate(25);
-$('#call').classList.remove('waiting');
-renderFeeds();
-const inv = $('#invite');
-if (!inv.hidden) {
-gsap.to(inv, { autoAlpha: 0, scale: 0.94, duration: 0.45, ease: 'power2.in',
-onComplete: () => { inv.hidden = true; gsap.set(inv, { clearProps: 'all' }); } });
-}
-const pip = $('#pip');
-pip.hidden = false;
-placePip(false);
-gsap.fromTo(pip, { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1, duration: 0.75, ease: 'back.out(1.6)' });
-gsap.fromTo('#stage video', { opacity: 0 }, { opacity: 1, duration: 0.9, ease: 'power2.out' });
-startTimer();
-sendState();
-toast('Appel connecté');
-pokeControls();
-}
-function watchIce(pc) {
-const tok = state.token;
-pc.addEventListener('iceconnectionstatechange', () => {
-if (tok !== state.token) return;
-const s = pc.iceConnectionState;
-if (s === 'disconnected') { state.unstable = true; setStatus('Connexion instable…'); }
-else if (s === 'connected' || s === 'completed') { state.unstable = false; updateTimer(); }
-else if (s === 'failed') endCall('failed');
-});
+  state.connected = true;
+  clearTimeout(state.joinTimeout);
+  boostQuality(state.pc);
+  requestWakeLock();
+  if (navigator.vibrate) navigator.vibrate(25);
+  $('#call').classList.remove('waiting');
+  renderFeeds();
+  playRemoteAudio();
+  const inv = $('#invite');
+  if (!inv.hidden) {
+    gsap.to(inv, { autoAlpha: 0, scale: 0.94, duration: 0.45, ease: 'power2.in', onComplete: () => { inv.hidden = true; gsap.set(inv, { clearProps: 'all' }); } });
+  }
+  const pip = $('#pip');
+  pip.hidden = false;
+  placePip(false);
+  gsap.fromTo(pip, { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1, duration: 0.75, ease: 'back.out(1.6)' });
+  gsap.fromTo('#stage video', { opacity: 0 }, { opacity: 1, duration: 0.9, ease: 'power2.out' });
+  startTimer();
+  updateTitle();
+  sendState();
+  toast(remoteName() + ' a rejoint l’appel');
+  pokeControls();
 }
 async function boostQuality(pc) {
-try {
-const sender = pc.getSenders().find((s) => s.track && s.track.kind === 'video');
-if (!sender) return;
-const p = sender.getParameters();
-if (!p.encodings || !p.encodings.length) p.encodings = [{}];
-p.encodings[0].maxBitrate = 2500000;
-await sender.setParameters(p);
-} catch (e) { }
+  try {
+    const t = pc.getTransceivers().find((x) => x.receiver.track && x.receiver.track.kind === 'video');
+    if (!t || !t.sender) return;
+    const p = t.sender.getParameters();
+    if (!p.encodings || !p.encodings.length) p.encodings = [{}];
+    p.encodings[0].maxBitrate = 2500000;
+    await t.sender.setParameters(p);
+  } catch (e) { }
 }
 async function requestWakeLock() {
-try { if (navigator.wakeLock) state.wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+  try { if (navigator.wakeLock) state.wakeLock = await navigator.wakeLock.request('screen'); } catch { }
 }
 document.addEventListener('visibilitychange', () => {
-if (document.visibilityState === 'visible' && state.connected) requestWakeLock();
+  if (document.visibilityState === 'visible' && state.connected) requestWakeLock();
+  if (document.visibilityState === 'visible' && state.active) hello();
 });
 function startTimer() {
-state.seconds = 0;
-updateTimer();
-state.timer = setInterval(() => { state.seconds++; updateTimer(); }, 1000);
+  state.seconds = 0;
+  updateTimer();
+  clearInterval(state.timer);
+  state.timer = setInterval(() => { state.seconds++; updateTimer(); }, 1000);
 }
 function updateTimer() { if (!state.unstable) setStatus(fmt(state.seconds)); }
 function setStatus(t) { $('#ctStatus').textContent = t; }
+function updateTitle() { $('#ctTitle').textContent = state.connected ? remoteName() : state.code; $('#ctCode').hidden = !state.connected; $('#ctCode').textContent = state.code || ''; }
 function updateRemoteChip() {
-const chip = $('#remoteMicChip');
-const show = state.connected && !state.remote.mic;
-if (show === !chip.hidden) return;
-if (show) { chip.hidden = false; gsap.fromTo(chip, { autoAlpha: 0, y: -6 }, { autoAlpha: 1, y: 0, duration: 0.35 }); }
-else chip.hidden = true;
+  const chip = $('#remoteMicChip');
+  $('#remoteMicText').textContent = 'Micro de ' + remoteName() + ' coupé';
+  const show = state.connected && !state.remote.mic;
+  if (show === !chip.hidden) return;
+  if (show) { chip.hidden = false; gsap.fromTo(chip, { autoAlpha: 0, y: -6 }, { autoAlpha: 1, y: 0, duration: 0.35 }); }
+  else chip.hidden = true;
 }
+function sendState() { if (state.active) Sig.send('state', { state: myState() }); }
 
 function renderFeeds() {
-let stageFeed = 'local', pipFeed = null;
-if (state.remoteStream) {
-stageFeed = state.swapped ? 'local' : 'remote';
-pipFeed = state.swapped ? 'remote' : 'local';
-}
-assignFeed($('#stage'), stageFeed);
-assignFeed($('#pip'), pipFeed);
+  let stageFeed = 'local', pipFeed = null;
+  if (state.connected && state.remoteStream) {
+    stageFeed = state.swapped ? 'local' : 'remote';
+    pipFeed = state.swapped ? 'remote' : 'local';
+  }
+  assignFeed($('#stage'), stageFeed);
+  assignFeed($('#pip'), pipFeed);
 }
 function assignFeed(tile, feed) {
-const video = tile.querySelector('video');
-const stream = feed === 'local' ? state.localStream : feed === 'remote' ? state.remoteStream : null;
-if (video.srcObject !== stream) {
-video.srcObject = stream;
-if (stream) video.play().catch(() => {});
-}
-const isLocal = feed === 'local';
-video.classList.toggle('mirrored', isLocal && state.facing === 'user' && state.mirror);
-const camOff = isLocal ? !state.cam : feed === 'remote' ? !state.remote.cam : false;
-tile.classList.toggle('cam-off', camOff);
-tile.classList.toggle('mic-off', feed === 'remote' && !state.remote.mic);
-tile.querySelector('.tile-off span').textContent = isLocal ? 'Votre caméra est coupée' : 'Caméra du correspondant coupée';
+  const video = tile.querySelector('video');
+  const stream = feed === 'local' ? state.localStream : feed === 'remote' ? state.remoteStream : null;
+  if (video.srcObject !== stream) {
+    video.srcObject = stream;
+    if (stream) video.play().catch(() => { });
+  }
+  const isLocal = feed === 'local';
+  video.classList.toggle('mirrored', isLocal && state.facing === 'user' && state.mirror);
+  const vt = stream && stream.getVideoTracks()[0];
+  const camOff = isLocal ? (!state.cam || !vt) : feed === 'remote' ? (!state.remote.cam || !vt || vt.muted) : false;
+  tile.classList.toggle('cam-off', camOff);
+  tile.classList.toggle('mic-off', feed === 'remote' ? !state.remote.mic : isLocal && !myState().mic);
+  tile.querySelector('.tile-off span').textContent = isLocal ? 'Votre caméra est coupée' : (state.remote.cam ? 'Image en cours…' : 'Caméra de ' + remoteName() + ' coupée');
+  const who = tile.querySelector('.who b');
+  who.textContent = isLocal ? (Me.name ? Me.name + ' (vous)' : 'Vous') : remoteName();
+  tile.querySelector('.who').hidden = !feed || (tile.id === 'stage' && !state.connected);
 }
 function swapFeeds() {
-if (!state.connected) return;
-state.swapped = !state.swapped;
-gsap.fromTo(['#stage video', '#pip video'], { opacity: 0.35 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
-renderFeeds();
+  if (!state.connected) return;
+  state.swapped = !state.swapped;
+  gsap.fromTo(['#stage video', '#pip video'], { opacity: 0.35 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
+  renderFeeds();
 }
 
+/* ---------- vignette déplaçable ---------- */
 const pip = $('#pip');
 let corner = 'tr', pipPos = { x: 0, y: 0 }, drag = null;
 function safeInsets() {
-const cs = getComputedStyle($('#safeProbe'));
-return { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
+  const cs = getComputedStyle($('#safeProbe'));
+  return { top: parseFloat(cs.paddingTop) || 0, bottom: parseFloat(cs.paddingBottom) || 0 };
 }
 function pipBounds() {
-const W = window.innerWidth, H = window.innerHeight, w = pip.offsetWidth, h = pip.offsetHeight, m = 14;
-const s = safeInsets();
-const minY = m + s.top + 78;
-const maxY = Math.max(minY, H - h - (window.innerWidth < 600 ? 104 : 116) - s.bottom);
-return { minX: m, maxX: W - w - m, minY, maxY };
+  const W = window.innerWidth, H = window.innerHeight, w = pip.offsetWidth, h = pip.offsetHeight, m = 14;
+  const s = safeInsets();
+  const minY = m + s.top + 78;
+  const maxY = Math.max(minY, H - h - (window.innerWidth < 600 ? 104 : 116) - s.bottom);
+  return { minX: m, maxX: W - w - m, minY, maxY };
 }
 function placePip(animate) {
-const b = pipBounds();
-const p = { x: corner[1] === 'l' ? b.minX : b.maxX, y: corner[0] === 't' ? b.minY : b.maxY };
-pipPos = p;
-if (animate) gsap.to(pip, { x: p.x, y: p.y, duration: 0.55, ease: 'power3.out' });
-else gsap.set(pip, { x: p.x, y: p.y });
+  const b = pipBounds();
+  const p = { x: corner[1] === 'l' ? b.minX : b.maxX, y: corner[0] === 't' ? b.minY : b.maxY };
+  pipPos = p;
+  if (animate) gsap.to(pip, { x: p.x, y: p.y, duration: 0.55, ease: 'power3.out' });
+  else gsap.set(pip, { x: p.x, y: p.y });
 }
 pip.addEventListener('pointerdown', (e) => {
-pip.setPointerCapture(e.pointerId);
-gsap.killTweensOf(pip, 'x,y');
-drag = { sx: e.clientX, sy: e.clientY, x0: pipPos.x, y0: pipPos.y, moved: 0, lx: e.clientX, ly: e.clientY, lt: performance.now(), vx: 0, vy: 0 };
-gsap.to(pip, { scale: 1.04, duration: 0.2 });
+  pip.setPointerCapture(e.pointerId);
+  gsap.killTweensOf(pip, 'x,y');
+  drag = { sx: e.clientX, sy: e.clientY, x0: pipPos.x, y0: pipPos.y, moved: 0, lx: e.clientX, ly: e.clientY, lt: performance.now(), vx: 0, vy: 0 };
+  gsap.to(pip, { scale: 1.04, duration: 0.2 });
 });
 pip.addEventListener('pointermove', (e) => {
-if (!drag) return;
-const b = pipBounds();
-const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
-drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
-const x = Math.min(b.maxX + 40, Math.max(b.minX - 40, drag.x0 + dx));
-const y = Math.min(b.maxY + 40, Math.max(b.minY - 40, drag.y0 + dy));
-const now = performance.now(), dt = Math.max(1, now - drag.lt);
-drag.vx = (e.clientX - drag.lx) / dt; drag.vy = (e.clientY - drag.ly) / dt;
-drag.lx = e.clientX; drag.ly = e.clientY; drag.lt = now;
-pipPos = { x, y };
-gsap.set(pip, { x, y });
-pokeControls();
+  if (!drag) return;
+  const b = pipBounds();
+  const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+  drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+  const x = Math.min(b.maxX + 40, Math.max(b.minX - 40, drag.x0 + dx));
+  const y = Math.min(b.maxY + 40, Math.max(b.minY - 40, drag.y0 + dy));
+  const now = performance.now(), dt = Math.max(1, now - drag.lt);
+  drag.vx = (e.clientX - drag.lx) / dt; drag.vy = (e.clientY - drag.ly) / dt;
+  drag.lx = e.clientX; drag.ly = e.clientY; drag.lt = now;
+  pipPos = { x, y };
+  gsap.set(pip, { x, y });
+  pokeControls();
 });
 function endDrag() {
-if (!drag) return;
-const d = drag; drag = null;
-gsap.to(pip, { scale: 1, duration: 0.25 });
-if (d.moved < 6) { swapFeeds(); placePip(true); return; }
-const b = pipBounds();
-const px = pipPos.x + d.vx * 140, py = pipPos.y + d.vy * 140;
-corner = (py < (b.minY + b.maxY) / 2 ? 't' : 'b') + (px < (b.minX + b.maxX) / 2 ? 'l' : 'r');
-placePip(true);
+  if (!drag) return;
+  const d = drag; drag = null;
+  gsap.to(pip, { scale: 1, duration: 0.25 });
+  if (d.moved < 6) { swapFeeds(); placePip(true); return; }
+  const b = pipBounds();
+  const px = pipPos.x + d.vx * 140, py = pipPos.y + d.vy * 140;
+  corner = (py < (b.minY + b.maxY) / 2 ? 't' : 'b') + (px < (b.minX + b.maxX) / 2 ? 'l' : 'r');
+  placePip(true);
 }
 pip.addEventListener('pointerup', endDrag);
 pip.addEventListener('pointercancel', endDrag);
 window.addEventListener('resize', () => { if (!pip.hidden) placePip(false); });
 
+/* ---------- barre de commandes (masquée après 4,5 s sans geste) ---------- */
 let hideT, controlsHidden = false, barHover = false;
 const chrome = '.call-top, .shade';
 function showControls() {
-if (!controlsHidden) return;
-controlsHidden = false;
-gsap.to('.call-bottom', { y: 0, autoAlpha: 1, duration: 0.45, ease: 'power3.out' });
-gsap.to(chrome, { autoAlpha: 1, duration: 0.45 });
+  if (!controlsHidden) return;
+  controlsHidden = false;
+  gsap.to('.call-bottom', { y: 0, autoAlpha: 1, duration: 0.45, ease: 'power3.out' });
+  gsap.to(chrome, { autoAlpha: 1, duration: 0.45 });
 }
 function hideControls(force) {
-if (!force && (drag || barHover)) { pokeControls(); return; }
-if (controlsHidden) return;
-controlsHidden = true;
-gsap.to('.call-bottom', { y: 34, autoAlpha: 0, duration: 0.5, ease: 'power2.in' });
-gsap.to(chrome, { autoAlpha: 0, duration: 0.5 });
+  if (!force && (drag || barHover)) { pokeControls(); return; }
+  if (controlsHidden) return;
+  controlsHidden = true;
+  gsap.to('.call-bottom', { y: 34, autoAlpha: 0, duration: 0.5, ease: 'power2.in' });
+  gsap.to(chrome, { autoAlpha: 0, duration: 0.5 });
 }
+const touchOnly = window.matchMedia('(hover: none)').matches;   // téléphone / tablette : la barre reste toujours visible
 function pokeControls() {
-if (!state.connected) return;
-showControls();
-clearTimeout(hideT);
-hideT = setTimeout(() => hideControls(false), 4500);
+  if (!state.connected) return;
+  showControls();
+  if (touchOnly) { clearTimeout(hideT); return; }
+  clearTimeout(hideT);
+  hideT = setTimeout(() => hideControls(false), 4500);
 }
 $('#call').addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') pokeControls(); });
-$('#stage').addEventListener('click', () => {
-if (!state.connected) return;
-if (controlsHidden) pokeControls(); else { clearTimeout(hideT); hideControls(true); }
+$('#call').addEventListener('pointerdown', (e) => {          // un toucher n’importe où fait revenir les boutons
+  if (e.target.closest('.bar') || e.target.closest('#pip')) return;
+  if (!state.connected) return;
+  if (controlsHidden) { e.preventDefault(); pokeControls(); e.__shown = true; }
+});
+$('#stage').addEventListener('click', (e) => {
+  if (!state.connected || e.__shown || touchOnly) return;
+  if (controlsHidden) pokeControls(); else { clearTimeout(hideT); hideControls(true); }
 });
 $('.bar').addEventListener('mouseenter', () => { barHover = true; });
 $('.bar').addEventListener('mouseleave', () => { barHover = false; pokeControls(); });
 
-function toggleMic() {
-const t = state.localStream && state.localStream.getAudioTracks()[0];
-if (!t) return;
-state.mic = !state.mic;
-t.enabled = state.mic;
-$('#btnMic').classList.toggle('is-off', !state.mic);
-sendState();
-pokeControls();
+/* ---------- boutons ---------- */
+function videoSender() {
+  const t = state.pc && state.pc.getTransceivers().find((x) => x.receiver.track && x.receiver.track.kind === 'video');
+  return t ? t.sender : null;
 }
-function toggleCam() {
-const t = state.localStream && state.localStream.getVideoTracks()[0];
-if (!t) return;
-state.cam = !state.cam;
-t.enabled = state.cam;
-$('#btnCam').classList.toggle('is-off', !state.cam);
-renderFeeds();
-sendState();
-pokeControls();
+function audioSender() {
+  const t = state.pc && state.pc.getTransceivers().find((x) => x.receiver.track && x.receiver.track.kind === 'audio');
+  return t ? t.sender : null;
+}
+let busy = false;
+async function toggleMic() {
+  if (!state.localStream || busy) return;
+  let t = state.localStream.getAudioTracks()[0];
+  if (!t) {                                                  // pas de micro au départ : on réessaie
+    busy = true;
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: AUDIO });
+      t = s.getAudioTracks()[0]; state.localStream.addTrack(t); state.mic = true;
+      const snd = audioSender(); if (snd) await snd.replaceTrack(t);
+    } catch (e) { toast(mediaError(e), true); busy = false; return; }
+    busy = false;
+  } else state.mic = !state.mic;
+  t.enabled = state.mic;
+  $('#btnMic').classList.toggle('is-off', !state.mic);
+  renderFeeds(); sendState(); pokeControls();
+}
+async function toggleCam() {
+  if (!state.localStream || busy) return;
+  let t = state.localStream.getVideoTracks()[0];
+  if (!t) {
+    busy = true;
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: state.facing, width: { ideal: 1280 }, height: { ideal: 720 } } });
+      t = s.getVideoTracks()[0]; state.localStream.addTrack(t); state.cam = true;
+      const snd = videoSender(); if (snd) await snd.replaceTrack(t);
+      updateFlipAvailability();
+    } catch (e) { toast(mediaError(e), true); busy = false; return; }
+    busy = false;
+  } else state.cam = !state.cam;
+  t.enabled = state.cam;
+  $('#btnCam').classList.toggle('is-off', !state.cam);
+  renderFeeds(); sendState(); pokeControls();
 }
 function toggleMirror() {
-state.mirror = !state.mirror;
-$('#btnMirror').classList.toggle('is-off', !state.mirror);
-renderFeeds();
-pokeControls();
+  state.mirror = !state.mirror;
+  $('#btnMirror').classList.toggle('is-off', !state.mirror);
+  renderFeeds();
+  pokeControls();
+  toast(state.mirror ? 'Effet miroir activé (votre aperçu)' : 'Effet miroir désactivé (votre aperçu)');
 }
 let flipping = false;
 async function flipCamera() {
-if (!state.localStream || flipping) return;
-flipping = true;
-const tok = state.token;
-const next = state.facing === 'user' ? 'environment' : 'user';
-const old = state.localStream.getVideoTracks()[0];
-if (old) old.stop();
-let track = null;
-try {
-const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: next }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
-track = s.getVideoTracks()[0];
-state.facing = next;
-} catch (e) {
-try {
-const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: state.facing } }, audio: false });
-track = s.getVideoTracks()[0];
-} catch {}
-toast('Impossible de changer de caméra', true);
-}
-if (tok !== state.token) { if (track) track.stop(); flipping = false; return; }
-if (track) {
-track.enabled = state.cam;
-const pc = state.call && state.call.peerConnection;
-const sender = pc && pc.getSenders().find((s) => s.track && s.track.kind === 'video');
-if (sender) { try { await sender.replaceTrack(track); } catch {} }
-state.localStream = new MediaStream([track, ...state.localStream.getAudioTracks()]);
-renderFeeds();
-}
-flipping = false;
-pokeControls();
+  if (!state.localStream || flipping) return;
+  flipping = true;
+  const tok = state.token;
+  const next = state.facing === 'user' ? 'environment' : 'user';
+  const old = state.localStream.getVideoTracks()[0];
+  let track = null;
+  try {
+    if (old) old.stop();                                     // certains téléphones n’ouvrent pas deux caméras à la fois
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: next }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    track = s.getVideoTracks()[0];
+    state.facing = next;
+  } catch (e) {
+    try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: state.facing } }, audio: false }); track = s.getVideoTracks()[0]; } catch { }
+    toast('Impossible de changer de caméra', true);
+  }
+  if (tok !== state.token) { if (track) track.stop(); flipping = false; return; }
+  if (track) {
+    track.enabled = state.cam;
+    const snd = videoSender();
+    if (snd) { try { await snd.replaceTrack(track); } catch { } }
+    if (old) state.localStream.removeTrack(old);
+    state.localStream.addTrack(track);
+    const pv = [$('#stage video'), $('#pip video')].find(v => v.srcObject === state.localStream);
+    if (pv) { pv.srcObject = null; pv.srcObject = state.localStream; pv.play().catch(() => { }); }
+    renderFeeds();
+  }
+  flipping = false;
+  pokeControls();
 }
 async function updateFlipAvailability() {
-try {
-const devices = await navigator.mediaDevices.enumerateDevices();
-$('#btnFlip').hidden = devices.filter((d) => d.kind === 'videoinput').length < 2;
-} catch { $('#btnFlip').hidden = true; }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    $('#btnFlip').hidden = devices.filter((d) => d.kind === 'videoinput').length < 2;
+  } catch { $('#btnFlip').hidden = true; }
 }
 
+/* ---------- invitation ---------- */
 function inviteLink() {
-return location.protocol === 'file:'
-? state.code
-: `${location.origin}${location.pathname}?code=${encodeURIComponent(state.code)}`;
+  return location.protocol === 'file:' ? state.code : `${location.origin}${location.pathname}?code=${encodeURIComponent(state.code)}`;
+}
+function inviteText() {
+  return location.protocol === 'file:'
+    ? `${Me.name} t’invite à un appel VisioConnect. Ouvre VisioConnect, écris ton nom et entre le code : ${state.code}`
+    : `${Me.name} t’invite à un appel VisioConnect (code ${state.code}) : ${inviteLink()}`;
 }
 function buildInvite() {
-$('#invCode').textContent = state.code;
-const box = $('#invQr');
-box.innerHTML = '';
-try {
-new QRCode(box, { text: inviteLink(), width: 320, height: 320, colorDark: '#05060a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-} catch { box.hidden = true; }
-$('#btnShare').hidden = !navigator.share;
-$('#invNote').textContent = location.protocol === 'file:'
-? 'Page ouverte en fichier local : le QR contient seulement le code.'
-: 'Le correspondant scanne le QR ou saisit le code.';
+  $('#invCode').textContent = state.code;
+  const box = $('#invQr');
+  box.innerHTML = ''; box.hidden = false;
+  try {
+    new QRCode(box, { text: inviteLink(), width: 320, height: 320, colorDark: '#05060a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  } catch { box.hidden = true; }
+  $('#btnShare').hidden = !navigator.share;
+  $('#btnCopy').lastChild.textContent = location.protocol === 'file:' ? 'Copier l’invitation' : 'Copier le lien';
+  $('#invNote').textContent = location.protocol === 'file:'
+    ? 'Page ouverte en fichier local : le QR contient seulement le code.'
+    : 'Le correspondant scanne le QR ou saisit le code.';
 }
 function resetCallUI() {
-gsap.killTweensOf(pip);
-pip.hidden = true;
-gsap.set(pip, { clearProps: 'all' });
-corner = 'tr';
-$('#invite').hidden = true;
-$('#invQr').hidden = false;
-$('#remoteMicChip').hidden = true;
-['#btnMic', '#btnCam', '#btnMirror'].forEach((s) => $(s).classList.remove('is-off'));
-gsap.killTweensOf('.call-bottom, .call-top, .shade');
-gsap.set('.call-bottom, .call-top, .shade', { clearProps: 'all' });
-controlsHidden = false;
-clearTimeout(hideT);
-$('#call').classList.add('waiting');
-setStatus('');
+  gsap.killTweensOf(pip);
+  pip.hidden = true;
+  gsap.set(pip, { clearProps: 'all' });
+  corner = 'tr';
+  $('#invite').hidden = true;
+  $('#invQr').hidden = false;
+  $('#remoteMicChip').hidden = true;
+  $('#unlockSound').hidden = true;
+  ['#btnMic', '#btnCam', '#btnMirror'].forEach((s) => $(s).classList.remove('is-off'));
+  gsap.killTweensOf('.call-bottom, .call-top, .shade');
+  gsap.set('.call-bottom, .call-top, .shade', { clearProps: 'all' });
+  controlsHidden = false;
+  clearTimeout(hideT);
+  $('#call').classList.add('waiting');
+  $('#ctCode').hidden = true;
+  setStatus('');
 }
 function enterCall(mode) {
-hideLoader();
-callVisible = true;
-const call = $('#call'), home = $('#home');
-resetCallUI();
-if (!state.cam) $('#btnCam').classList.add('is-off');
-$('#ctTitle').textContent = state.code;
-setStatus(mode === 'waiting' ? 'En attente du correspondant…' : 'Connexion…');
-renderFeeds();
-updateFlipAvailability();
-if (mode === 'waiting') {
-buildInvite();
-const inv = $('#invite');
-inv.hidden = false;
-gsap.fromTo(inv, { autoAlpha: 0, y: 26, scale: 0.98 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.9, ease: 'expo.out', delay: 0.25 });
-}
-gsap.killTweensOf([call, home, '#gl']);
-call.hidden = false;
-gsap.fromTo(call, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6, ease: 'power2.out' });
-gsap.to(home, { autoAlpha: 0, duration: 0.4, onComplete: () => { home.hidden = true; } });
-gsap.to('#gl', { autoAlpha: 0, duration: 0.6, onComplete: () => scene.stop() });
-gsap.fromTo('.call-bottom .cbtn', { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.05, duration: 0.7, ease: 'expo.out', delay: 0.2 });
+  hideLoader();
+  callVisible = true;
+  const call = $('#call'), home = $('#home');
+  resetCallUI();
+  if (!state.cam) $('#btnCam').classList.add('is-off');
+  if (!state.mic) $('#btnMic').classList.add('is-off');
+  updateTitle();
+  setStatus(mode === 'waiting' ? 'En attente du correspondant…' : 'Connexion…');
+  renderFeeds();
+  updateFlipAvailability();
+  if (mode === 'waiting') {
+    buildInvite();
+    const inv = $('#invite');
+    inv.hidden = false;
+    gsap.fromTo(inv, { autoAlpha: 0, y: 26, scale: 0.98 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.9, ease: 'expo.out', delay: 0.25 });
+  }
+  gsap.killTweensOf([call, home, '#gl']);
+  call.hidden = false;
+  gsap.fromTo(call, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.6, ease: 'power2.out' });
+  gsap.to(home, { autoAlpha: 0, duration: 0.4, onComplete: () => { home.hidden = true; } });
+  scene.stop();                                            // le fond 3D ne tourne plus pendant l’appel (batterie, fluidité)
+  gsap.to('#gl', { autoAlpha: 0, duration: 0.6 });
+  gsap.fromTo('.call-bottom .cbtn', { y: 30, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.05, duration: 0.7, ease: 'expo.out', delay: 0.2 });
 }
 async function endCall(reason = 'local') {
-if (!state.active || state.ending) return;
-state.ending = true;
-if (reason === 'local' && state.conn && state.conn.open) {
-try { state.conn.send({ type: 'bye' }); } catch {}
-await wait(180);
-}
-const dur = state.connected ? fmt(state.seconds) : '';
-const msg = reason === 'remote' ? 'Le correspondant a raccroché'
-: reason === 'failed' ? 'Connexion perdue'
-: 'Appel terminé';
-finish(msg, reason === 'failed', dur);
+  if (!state.active || state.ending) return;
+  state.ending = true;
+  if (reason === 'local') { Sig.byeNow(); await wait(200); }
+  const dur = state.connected ? fmt(state.seconds) : '';
+  const msg = reason === 'remote' ? remoteName() + ' a raccroché' : reason === 'failed' ? 'Connexion perdue' : 'Appel terminé';
+  finish(msg, reason === 'failed', dur);
 }
 function cleanup() {
-state.token++;
-state.ending = true;
-clearInterval(state.timer);
-clearTimeout(state.joinTimeout);
-clearTimeout(hideT);
-try { if (state.wakeLock) state.wakeLock.release(); } catch {}
-if (state.localStream) state.localStream.getTracks().forEach((t) => t.stop());
-try { if (state.call) state.call.close(); } catch {}
-try { if (state.conn) state.conn.close(); } catch {}
-try { if (state.peer) state.peer.destroy(); } catch {}
-$('#stage video').srcObject = null;
-$('#pip video').srcObject = null;
-$('#remoteAudio').srcObject = null;
-Object.assign(state, freshState(), { token: state.token });
+  state.token++;
+  state.ending = true;
+  clearInterval(state.timer); clearInterval(state.helloT);
+  clearTimeout(state.joinTimeout); clearTimeout(state.relayT); clearTimeout(state.failT);
+  clearTimeout(hideT);
+  try { if (state.wakeLock) state.wakeLock.release(); } catch { }
+  if (state.localStream) state.localStream.getTracks().forEach((t) => t.stop());
+  try { if (state.pc) state.pc.close(); } catch { }
+  Sig.close();
+  $('#stage video').srcObject = null;
+  $('#pip video').srcObject = null;
+  $('#remoteAudio').srcObject = null;
+  Object.assign(state, freshState(), { token: state.token });
 }
 function finish(msg, isErr = false, dur = '') {
-const wasVisible = callVisible;
-cleanup();
-if (!wasVisible) {
-hideLoader();
-scene.pulse(false);
-if (msg) toast(msg, isErr);
-return;
-}
-const ov = $('#ended');
-$('#endedReason').textContent = msg;
-$('#endedTime').textContent = dur;
-ov.hidden = false;
-gsap.fromTo(ov, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 });
-gsap.fromTo('.ended-title, .ended-time', { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.08, ease: 'expo.out' });
-gsap.delayedCall(1.5, () => goHome(ov));
+  const wasVisible = callVisible;
+  if (state.active && !state.ending) Sig.byeNow();
+  cleanup();
+  if (!wasVisible) {
+    hideLoader();
+    scene.pulse(false);
+    if (msg) toast(msg, isErr);
+    return;
+  }
+  const ov = $('#ended');
+  $('#endedReason').textContent = msg;
+  $('#endedTime').textContent = dur;
+  ov.hidden = false;
+  gsap.fromTo(ov, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 });
+  gsap.fromTo('.ended-title, .ended-time', { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.08, ease: 'expo.out' });
+  gsap.delayedCall(isErr ? 2.6 : 1.5, () => goHome(ov));
 }
 function goHome(ov) {
-const call = $('#call'), home = $('#home');
-callVisible = false;
-gsap.killTweensOf([call, home, '#gl']);
-home.hidden = false;
-scene.start();
-scene.pulse(false);
-gsap.to('#gl', { autoAlpha: 1, duration: 0.8 });
-gsap.fromTo(home, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, delay: 0.1 });
-gsap.to(call, {
-autoAlpha: 0, duration: 0.5,
-onComplete: () => {
-call.hidden = true;
-resetCallUI();
-if (ov) { ov.hidden = true; gsap.set(ov, { clearProps: 'all' }); }
-}
-});
-$('#inviteHint').hidden = true;
-if (location.search) history.replaceState(null, '', location.pathname);
+  const call = $('#call'), home = $('#home');
+  callVisible = false;
+  gsap.killTweensOf([call, home, '#gl']);
+  home.hidden = false;
+  scene.start();
+  scene.pulse(false);
+  gsap.to('#gl', { autoAlpha: 1, duration: 0.8 });
+  gsap.fromTo(home, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, delay: 0.1 });
+  gsap.to(call, {
+    autoAlpha: 0, duration: 0.5,
+    onComplete: () => {
+      call.hidden = true;
+      resetCallUI();
+      if (ov) { ov.hidden = true; gsap.set(ov, { clearProps: 'all' }); }
+    }
+  });
+  $('#inviteHint').hidden = true;
+  if (location.search) history.replaceState(null, '', location.pathname);
 }
 
+/* ---------- scanner de QR ---------- */
 let scanStream = null, scanRaf = 0, scanOpen = false;
 async function openScanner() {
-if (scanOpen || state.active) return;
-scanOpen = true;
-const sheet = $('#scanSheet');
-sheet.hidden = false;
-gsap.fromTo(sheet, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 });
-gsap.fromTo('.sheet-card', { y: 30, scale: 0.97 }, { y: 0, scale: 1, duration: 0.55, ease: 'expo.out' });
-if (typeof window.jsQR !== 'function') { toast('Lecteur QR indisponible', true); closeScanner(); return; }
-if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('La caméra nécessite HTTPS ou localhost.', true); closeScanner(); return; }
-let stream;
-try {
-stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-} catch (e) { toast(mediaError(e), true); closeScanner(); return; }
-if (!scanOpen) { stream.getTracks().forEach((t) => t.stop()); return; }
-scanStream = stream;
-const v = $('#scanVideo');
-v.srcObject = stream;
-await v.play().catch(() => {});
-const c = $('#scanCanvas');
-const ctx = c.getContext('2d', { willReadFrequently: true });
-const tick = () => {
-if (!scanStream) return;
-if (v.readyState >= 2 && v.videoWidth) {
-const w = 480, h = Math.round((v.videoHeight / v.videoWidth) * w);
-c.width = w; c.height = h;
-ctx.drawImage(v, 0, 0, w, h);
-const img = ctx.getImageData(0, 0, w, h);
-const r = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
-if (r && r.data) {
-const code = extractCode(r.data);
-if (code) { onScanned(code); return; }
-}
-}
-scanRaf = requestAnimationFrame(tick);
-};
-scanRaf = requestAnimationFrame(tick);
+  if (scanOpen || state.active) return;
+  scanOpen = true;
+  const sheet = $('#scanSheet');
+  sheet.hidden = false;
+  gsap.fromTo(sheet, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 });
+  gsap.fromTo('.sheet-card', { y: 30, scale: 0.97 }, { y: 0, scale: 1, duration: 0.55, ease: 'expo.out' });
+  if (typeof window.jsQR !== 'function') { toast('Lecteur QR indisponible', true); closeScanner(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('La caméra nécessite HTTPS ou localhost.', true); closeScanner(); return; }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+  } catch (e) { toast(mediaError(e), true); closeScanner(); return; }
+  if (!scanOpen) { stream.getTracks().forEach((t) => t.stop()); return; }
+  scanStream = stream;
+  const v = $('#scanVideo');
+  v.srcObject = stream;
+  await v.play().catch(() => { });
+  const c = $('#scanCanvas');
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  const tick = () => {
+    if (!scanStream) return;
+    if (v.readyState >= 2 && v.videoWidth) {
+      const w = 480, h = Math.round((v.videoHeight / v.videoWidth) * w);
+      c.width = w; c.height = h;
+      ctx.drawImage(v, 0, 0, w, h);
+      const img = ctx.getImageData(0, 0, w, h);
+      const r = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+      if (r && r.data) {
+        const code = extractCode(r.data);
+        if (code) { onScanned(code); return; }
+      }
+    }
+    scanRaf = requestAnimationFrame(tick);
+  };
+  scanRaf = requestAnimationFrame(tick);
 }
 function extractCode(text) {
-try { const c = new URL(text).searchParams.get('code'); if (c) return c; } catch {}
-const s = sanitize(text);
-return s.length >= 6 && s.length <= 24 ? text.trim() : null;
+  try { const c = new URL(text).searchParams.get('code'); if (c) return c; } catch { }
+  const s = sanitize(text);
+  return s.length >= 6 && s.length <= 24 ? text.trim() : null;
 }
 function onScanned(code) {
-if (navigator.vibrate) navigator.vibrate(40);
-closeScanner();
-$('#joinCode').value = code;
-toast('Invitation détectée');
-setTimeout(() => startJoin(code), 380);
+  if (navigator.vibrate) navigator.vibrate(40);
+  closeScanner();
+  $('#joinCode').value = code;
+  toast('Invitation détectée');
+  if ($('#myName').value.trim().length >= 2) setTimeout(() => startJoin(code), 380);
+  else setTimeout(() => { $('#myName').focus(); toast('Écrivez votre nom puis appuyez sur Rejoindre.'); }, 380);
 }
 function closeScanner() {
-scanOpen = false;
-cancelAnimationFrame(scanRaf);
-if (scanStream) scanStream.getTracks().forEach((t) => t.stop());
-scanStream = null;
-$('#scanVideo').srcObject = null;
-const sheet = $('#scanSheet');
-if (sheet.hidden) return;
-gsap.to(sheet, { autoAlpha: 0, duration: 0.25, onComplete: () => { sheet.hidden = true; gsap.set(sheet, { clearProps: 'all' }); } });
+  scanOpen = false;
+  cancelAnimationFrame(scanRaf);
+  if (scanStream) scanStream.getTracks().forEach((t) => t.stop());
+  scanStream = null;
+  $('#scanVideo').srcObject = null;
+  const sheet = $('#scanSheet');
+  if (sheet.hidden) return;
+  gsap.to(sheet, { autoAlpha: 0, duration: 0.25, onComplete: () => { sheet.hidden = true; gsap.set(sheet, { clearProps: 'all' }); } });
 }
 
+/* ---------- branchements ---------- */
+$('#myName').value = store.get('vc_name', '');
+$('#myName').addEventListener('input', () => $('.namebox').classList.remove('bad'));
+$('#myName').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (sanitize($('#joinCode').value).length >= 6) startJoin($('#joinCode').value); else startCreate(); } });
 $('#btnCreate').addEventListener('click', startCreate);
 $('#joinForm').addEventListener('submit', (e) => { e.preventDefault(); startJoin($('#joinCode').value); });
 $('#joinCode').addEventListener('input', (e) => { e.target.value = e.target.value.toLowerCase(); });
 $('#btnScan').addEventListener('click', openScanner);
 $('#scanClose').addEventListener('click', closeScanner);
 $('#scanSheet').addEventListener('click', (e) => { if (e.target.id === 'scanSheet') closeScanner(); });
-$('#loaderCancel').addEventListener('click', () => {
-cleanup();
-hideLoader();
-scene.pulse(false);
-});
+$('#loaderCancel').addEventListener('click', () => { cleanup(); hideLoader(); scene.pulse(false); });
 $('#btnMic').addEventListener('click', toggleMic);
 $('#btnCam').addEventListener('click', toggleCam);
 $('#btnMirror').addEventListener('click', toggleMirror);
 $('#btnFlip').addEventListener('click', flipCamera);
 $('#btnEnd').addEventListener('click', () => endCall('local'));
+$('#unlockSound').addEventListener('click', () => playRemoteAudio());
 $('#btnCopy').addEventListener('click', async () => {
-try { await navigator.clipboard.writeText(inviteLink()); toast(location.protocol === 'file:' ? 'Code copié' : 'Lien copié'); }
-catch { toast('Copie impossible, code : ' + state.code, true); }
+  const text = location.protocol === 'file:' ? inviteText() : inviteLink();
+  try { await navigator.clipboard.writeText(text); toast(location.protocol === 'file:' ? 'Invitation copiée' : 'Lien copié'); }
+  catch { toast('Copie impossible, code : ' + state.code, true); }
 });
 $('#btnShare').addEventListener('click', async () => {
-try { await navigator.share({ title: 'VisioConnect', text: `Rejoins mon appel vidéo (code ${state.code})`, url: location.protocol === 'file:' ? undefined : inviteLink() }); }
-catch {}
+  try { await navigator.share({ title: 'VisioConnect', text: inviteText(), url: location.protocol === 'file:' ? undefined : inviteLink() }); } catch { }
 });
 document.addEventListener('keydown', (e) => {
-if (e.target.matches('input, textarea')) return;
-if (callVisible && state.active) {
-if (e.key === 'm' || e.key === 'M') toggleMic();
-if (e.key === 'v' || e.key === 'V') toggleCam();
-}
-if (e.key === 'Escape' && scanOpen) closeScanner();
+  if (e.target.matches('input, textarea')) return;
+  if (callVisible && state.active) {
+    if (e.key === 'm' || e.key === 'M') toggleMic();
+    if (e.key === 'v' || e.key === 'V') toggleCam();
+  }
+  if (e.key === 'Escape' && scanOpen) closeScanner();
 });
-window.addEventListener('beforeunload', (e) => {
-if (state.connected) { e.preventDefault(); e.returnValue = ''; }
-});
-window.addEventListener('pagehide', () => {
-if (state.conn && state.conn.open) { try { state.conn.send({ type: 'bye' }); } catch {} }
-});
+window.addEventListener('beforeunload', (e) => { if (state.connected) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('pagehide', () => { if (state.active) Sig.byeNow(); });
+if (!window.RTCPeerConnection) toast('Ce navigateur ne gère pas les appels vidéo.', true);
 
 const urlCode = new URLSearchParams(location.search).get('code');
 if (urlCode) {
-$('#joinCode').value = urlCode;
-$('#inviteHint').hidden = false;
+  $('#joinCode').value = urlCode;
+  $('#inviteHint').hidden = false;
 }
 scene.start();
 scene.intro();
 gsap.timeline({ defaults: { ease: 'expo.out' } })
-.from('.brand', { y: -16, autoAlpha: 0, duration: 1.1 })
-.from('.hero .l > span', { yPercent: 110, duration: 1.4, stagger: 0.1 }, '<0.1')
-.from('.eyebrow, .lede, .actions, .invite-hint, .foot', { y: 20, autoAlpha: 0, duration: 1.1, stagger: 0.08 }, '<0.3')
-.add(() => {
-if (urlCode) gsap.fromTo('.join-go', { scale: 1 }, { scale: 1.08, duration: 0.5, yoyo: true, repeat: 3, ease: 'sine.inOut' });
-});
+  .from('.brand', { y: -16, autoAlpha: 0, duration: 1.1 })
+  .from('.hero .l > span', { yPercent: 110, duration: 1.4, stagger: 0.1 }, '<0.1')
+  .from('.eyebrow, .lede, .namebox, .actions, .invite-hint, .foot', { y: 20, autoAlpha: 0, duration: 1.1, stagger: 0.08 }, '<0.3')
+  .add(() => {
+    if (urlCode) gsap.fromTo('.join-go', { scale: 1 }, { scale: 1.08, duration: 0.5, yoyo: true, repeat: 3, ease: 'sine.inOut' });
+  });
 </script>
 </body>
 </html>
